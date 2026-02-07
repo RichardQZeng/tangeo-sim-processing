@@ -6,10 +6,38 @@
 
 import math
 from dataclasses import dataclass
-from qgis.core import (QgsLineString, QgsPoint, QgsPointXY, QgsPolygon, QgsWkbTypes, QgsGeometry,
-                       QgsGeometryUtils, QgsProcessingException, QgsMultiPolygon)
+from qgis.core import (
+    QgsLineString,
+    QgsPoint,
+    QgsPointXY,
+    QgsPolygon,
+    QgsWkbTypes,
+    QgsGeometry,
+    QgsGeometryUtils,
+    QgsProcessingException,
+    QgsMultiPolygon,
+)
 
-from ..geo_sim_util import Epsilon, GsCollection, GsFeature, GsPolygon, Bend, GeoSimUtil, ProgressBar
+try:
+    from ..geo_sim_util import (
+        Epsilon,
+        GsCollection,
+        GsFeature,
+        GsPolygon,
+        Bend,
+        GeoSimUtil,
+        ProgressBar,
+    )
+except ImportError:
+    from geo_sim_util import (
+        Epsilon,
+        GsCollection,
+        GsFeature,
+        GsPolygon,
+        Bend,
+        GeoSimUtil,
+        ProgressBar,
+    )
 
 
 # --------------------------------------------------------
@@ -23,7 +51,7 @@ FLAT_ANGLE = 0
 
 
 class BendReduced:
-    """Class containing the information of a bend that has been reduced. """
+    """Class containing the information of a bend that has been reduced."""
 
     CASE_1 = "Case1"
     CASE_2 = "Case2"
@@ -43,24 +71,34 @@ class BendReduced:
         if angle_j > math.pi:
             angle_j = (2 * math.pi) - angle_j  # Normalize angle between [0..180]
         angle_smooth = max(angle_i, angle_j)
-        angle_smooth = (math.pi - angle_smooth)
+        angle_smooth = math.pi - angle_smooth
         if smooth_case == BendReduced.CASE_1:
             angle_smooth /= 1.5
-            if math.degrees(angle_smooth) > 30.:
-                angle_smooth = math.radians(30.)
+            if math.degrees(angle_smooth) > 30.0:
+                angle_smooth = math.radians(30.0)
         elif smooth_case == BendReduced.CASE_2:
             angle_smooth /= 2.5
-            if math.degrees(angle_smooth) > 20.:
-                angle_smooth = math.radians(20.)
+            if math.degrees(angle_smooth) > 20.0:
+                angle_smooth = math.radians(20.0)
         elif smooth_case == BendReduced.CASE_3:
             angle_smooth /= 3
-            if math.degrees(angle_smooth) > 20.:
-                angle_smooth = math.radians(20.)
+            if math.degrees(angle_smooth) > 20.0:
+                angle_smooth = math.radians(20.0)
 
         return angle_smooth
 
-    __slots__ = ('rb_geom', 'qgs_point_start', 'qgs_point_end', 'qgs_geom_bend', 'qgs_geom_old_subline',
-                 'i', 'j', 'is_line_smoothable', 'qgs_geom_smooth_line', 'qgs_geom_smooth_polygon')
+    __slots__ = (
+        "rb_geom",
+        "qgs_point_start",
+        "qgs_point_end",
+        "qgs_geom_bend",
+        "qgs_geom_old_subline",
+        "i",
+        "j",
+        "is_line_smoothable",
+        "qgs_geom_smooth_line",
+        "qgs_geom_smooth_polygon",
+    )
 
     def __init__(self, rb_geom, qgs_point_start, qgs_point_end, qgs_geom_bend):
         """Constructor that initialize a BendReduced object
@@ -75,7 +113,9 @@ class BendReduced:
         self.qgs_point_start = qgs_point_start
         self.qgs_point_end = qgs_point_end
         self.qgs_geom_bend = qgs_geom_bend
-        self.qgs_geom_old_subline = QgsGeometry(QgsLineString([qgs_point_start, qgs_point_end]))
+        self.qgs_geom_old_subline = QgsGeometry(
+            QgsLineString([qgs_point_start, qgs_point_end])
+        )
         self.qgs_geom_smooth_line = None
         self.qgs_geom_smooth_polygon = None
         self.i = None
@@ -102,17 +142,25 @@ class BendReduced:
         else:
             # Polygon is invalid... let's try to repair it
             qgs_pnt_start = qgs_line_string.startPoint()
-            qgs_line_string.addVertex(qgs_pnt_start)  # Close the line with the startpoint
+            qgs_line_string.addVertex(
+                qgs_pnt_start
+            )  # Close the line with the startpoint
             qgs_geom_close_line = QgsGeometry(qgs_line_string)
-            qgs_geom_unary = QgsGeometry.unaryUnion([qgs_geom_close_line])  # Create node at each overlap
-            qgs_geom_polygonize = QgsGeometry.polygonize([qgs_geom_unary])  # Create multi polygon
+            qgs_geom_unary = QgsGeometry.unaryUnion(
+                [qgs_geom_close_line]
+            )  # Create node at each overlap
+            qgs_geom_polygonize = QgsGeometry.polygonize(
+                [qgs_geom_unary]
+            )  # Create multi polygon
             for qgs_part in qgs_geom_polygonize.parts():
                 # Validate that each part is valid
                 qgs_geom_part = QgsGeometry(qgs_part.clone())
                 if qgs_geom_part.isGeosValid() and qgs_geom_part.area() > epsilon:
                     qgs_multi_pol.addGeometry(qgs_geom_part.constGet().clone())
                 else:
-                    self.is_line_smoothable = False  # Something went wrong... nothing else to try... quit
+                    self.is_line_smoothable = (
+                        False  # Something went wrong... nothing else to try... quit
+                    )
                     break
 
         self.qgs_geom_smooth_polygon = QgsGeometry(qgs_multi_pol.clone())
@@ -148,29 +196,46 @@ class BendReduced:
 
         qgs_geom_bend_centroid = self.qgs_geom_bend.centroid()  # Centroid of the bend
         qgs_points_subline = []
-        for ind in [self.i-1, self.i, self.j, self.j+1]:
-            qgs_points_subline.append(self.rb_geom.qgs_geom.vertexAt(ind))  # Information needed to smooth the line
+        for ind in [self.i - 1, self.i, self.j, self.j + 1]:
+            qgs_points_subline.append(
+                self.rb_geom.qgs_geom.vertexAt(ind)
+            )  # Information needed to smooth the line
 
-        qgs_point_translate = qgs_points_subline[1].clone()  # Bend i is the point used for translation and rotation
+        qgs_point_translate = qgs_points_subline[
+            1
+        ].clone()  # Bend i is the point used for translation and rotation
         qgs_geom_smooth = QgsGeometry(QgsLineString(qgs_points_subline).clone())
         qgs_geom_smooth.translate(-qgs_point_translate.x(), -qgs_point_translate.y())
-        qgs_geom_bend_centroid.translate(-qgs_point_translate.x(), -qgs_point_translate.y())
+        qgs_geom_bend_centroid.translate(
+            -qgs_point_translate.x(), -qgs_point_translate.y()
+        )
 
         qgs_points_tr = qgs_geom_smooth.constGet().points()
         x_axis_length = QgsLineString([qgs_points_tr[1], qgs_points_tr[2]]).length()
-        qgs_point_x_axis = QgsPoint(x_axis_length, 0.)
+        qgs_point_x_axis = QgsPoint(x_axis_length, 0.0)
         # Calculate the angle between the translated sub line and the x axis
-        angle_x_axis = QgsGeometryUtils.angleBetweenThreePoints(qgs_point_x_axis.x(), 0.,
-                                                                qgs_points_tr[1].x(), qgs_points_tr[1].y(),
-                                                                qgs_points_tr[2].x(), qgs_points_tr[2].y())
+        angle_x_axis = QgsGeometryUtils.angleBetweenThreePoints(
+            qgs_point_x_axis.x(),
+            0.0,
+            qgs_points_tr[1].x(),
+            qgs_points_tr[1].y(),
+            qgs_points_tr[2].x(),
+            qgs_points_tr[2].y(),
+        )
         angle_x_axis_degree = math.degrees(angle_x_axis)
-        qgs_geom_smooth.rotate(-angle_x_axis_degree, QgsPointXY(0, 0))  # Rotate the subline on the x axis
-        qgs_geom_bend_centroid.rotate(-angle_x_axis_degree, QgsPointXY(0, 0))  # Rotate the centroid of the bend
+        qgs_geom_smooth.rotate(
+            -angle_x_axis_degree, QgsPointXY(0, 0)
+        )  # Rotate the subline on the x axis
+        qgs_geom_bend_centroid.rotate(
+            -angle_x_axis_degree, QgsPointXY(0, 0)
+        )  # Rotate the centroid of the bend
         qgs_points_ro = qgs_geom_smooth.constGet().points()
 
-        base_length = qgs_points_ro[2].x()  # The length of the base of the bend on the x axis
-        p0_x = base_length * (1. / 3.)  # x position of the first point
-        p1_x = base_length * (2. / 3.)  # x position of the second point
+        base_length = qgs_points_ro[
+            2
+        ].x()  # The length of the base of the bend on the x axis
+        p0_x = base_length * (1.0 / 3.0)  # x position of the first point
+        p1_x = base_length * (2.0 / 3.0)  # x position of the second point
 
         # Set the different smoothing cases of bend to smooth
         if qgs_points_ro[0].y() * qgs_points_ro[3].y() > 0:
@@ -184,31 +249,51 @@ class BendReduced:
             # The previous and after the bend are located on different side of the x axis
             smooth_case = BendReduced.CASE_3
 
-        angle_i = QgsGeometryUtils.angleBetweenThreePoints(qgs_points_ro[0].x(), qgs_points_ro[0].y(),
-                                                           qgs_points_ro[1].x(), qgs_points_ro[1].y(),
-                                                           qgs_points_ro[2].x(), qgs_points_ro[2].y(),)
-        angle_j = QgsGeometryUtils.angleBetweenThreePoints(qgs_points_ro[1].x(), qgs_points_ro[1].y(),
-                                                           qgs_points_ro[2].x(), qgs_points_ro[2].y(),
-                                                           qgs_points_ro[3].x(), qgs_points_ro[3].y(),)
+        angle_i = QgsGeometryUtils.angleBetweenThreePoints(
+            qgs_points_ro[0].x(),
+            qgs_points_ro[0].y(),
+            qgs_points_ro[1].x(),
+            qgs_points_ro[1].y(),
+            qgs_points_ro[2].x(),
+            qgs_points_ro[2].y(),
+        )
+        angle_j = QgsGeometryUtils.angleBetweenThreePoints(
+            qgs_points_ro[1].x(),
+            qgs_points_ro[1].y(),
+            qgs_points_ro[2].x(),
+            qgs_points_ro[2].y(),
+            qgs_points_ro[3].x(),
+            qgs_points_ro[3].y(),
+        )
 
         angle_smooth = BendReduced._calculate_angle(angle_i, angle_j, smooth_case)
 
-        p0_y = math.tan(angle_smooth) * p0_x  # Trigonometric formula to find length of opposite side (value of y)
+        p0_y = (
+            math.tan(angle_smooth) * p0_x
+        )  # Trigonometric formula to find length of opposite side (value of y)
 
         if smooth_case in [BendReduced.CASE_1, BendReduced.CASE_2]:
-            if qgs_points_ro[0].y() > 0.:
+            if qgs_points_ro[0].y() > 0.0:
                 p0_y *= -1
             qgs_point_smooth_0 = QgsPoint(p0_x, p0_y)
             qgs_point_smooth_1 = QgsPoint(p1_x, p0_y)
         else:  # CASE_3
-            if qgs_points_ro[0].y() > 0.:
+            if qgs_points_ro[0].y() > 0.0:
                 p0_y *= -1
             qgs_point_smooth_0 = QgsPoint(p0_x, p0_y)
             p0_y *= -1
             qgs_point_smooth_1 = QgsPoint(p1_x, p0_y)
 
-        qgs_geom_smooth = QgsGeometry(QgsLineString([qgs_points_ro[1], qgs_point_smooth_0,
-                                                     qgs_point_smooth_1, qgs_points_ro[2]]).clone())
+        qgs_geom_smooth = QgsGeometry(
+            QgsLineString(
+                [
+                    qgs_points_ro[1],
+                    qgs_point_smooth_0,
+                    qgs_point_smooth_1,
+                    qgs_points_ro[2],
+                ]
+            ).clone()
+        )
         qgs_geom_smooth.rotate(angle_x_axis_degree, QgsPointXY(0, 0))
         qgs_geom_smooth.translate(qgs_point_translate.x(), qgs_point_translate.y())
 
@@ -224,21 +309,30 @@ class BendReduced:
         :param diameter_tol: Diameter tolerance used for the bend reduction
         """
 
-        if self.qgs_geom_old_subline.constGet().length() > diameter_tol * (2. / 3.):  # Do not smooth short bend base
+        if self.qgs_geom_old_subline.constGet().length() > diameter_tol * (
+            2.0 / 3.0
+        ):  # Do not smooth short bend base
             qgs_line_string = self.rb_geom.qgs_geom.constGet()
             self.i = self._extract_vertex_ind(qgs_line_string, self.qgs_point_start)
             self.j = self._extract_vertex_ind(qgs_line_string, self.qgs_point_end)
 
             if self.i is not None and self.j is not None:
                 if self.i + 1 == self.j:
-                    if self.i >= 1 and self.j <= self.rb_geom.qgs_geom.constGet().numPoints() - 2:
-                        self.is_line_smoothable = True  # Good candidate for line smoothing
+                    if (
+                        self.i >= 1
+                        and self.j <= self.rb_geom.qgs_geom.constGet().numPoints() - 2
+                    ):
+                        self.is_line_smoothable = (
+                            True  # Good candidate for line smoothing
+                        )
                     else:
                         self.is_line_smoothable = False  # QgsPoint must not be first or last point in the line
                 else:
                     self.is_line_smoothable = False  # The QgsPoint must be consecutive
             else:
-                self.is_line_smoothable = False  # One or both QgsPoint are not there any more
+                self.is_line_smoothable = (
+                    False  # One or both QgsPoint are not there any more
+                )
 
         if self.is_line_smoothable:
             self._calculate_smooth_line()
@@ -246,12 +340,15 @@ class BendReduced:
 
         return
 
+
 @dataclass
 class Inflexion:
-    """Data class used to stored information
+    """Data class used to stored information"""
 
-    """
-    __slots__ = ('start', 'end', )
+    __slots__ = (
+        "start",
+        "end",
+    )
 
     start: int  # Index of the start of the inflexion
     end: int  # Index of the end of the inflexion
@@ -260,9 +357,18 @@ class Inflexion:
 class RbResults:
     """Class defining the stats and result"""
 
-    __slots__ = ('in_nbr_features', 'out_nbr_features', 'nbr_bend_reduced', 'nbr_bend_detected',
-                 'qgs_features_out', 'nbr_hole_del', 'nbr_pol_del', 'nbr_pass', 'is_structure_valid',
-                 'nbr_line_smooth')
+    __slots__ = (
+        "in_nbr_features",
+        "out_nbr_features",
+        "nbr_bend_reduced",
+        "nbr_bend_detected",
+        "qgs_features_out",
+        "nbr_hole_del",
+        "nbr_pol_del",
+        "nbr_pass",
+        "is_structure_valid",
+        "nbr_line_smooth",
+    )
 
     def __init__(self):
         """Constructor that initialize a RbResult object.
@@ -288,8 +394,15 @@ class ReduceBend:
     """Main class for bend reduction"""
 
     @staticmethod
-    def reduce(qgs_in_features, diameter_tol, smooth_line=False, flag_del_outer=False,
-               flag_del_inner=False, validate_structure=False, feedback=None):
+    def reduce(
+        qgs_in_features,
+        diameter_tol,
+        smooth_line=False,
+        flag_del_outer=False,
+        flag_del_inner=False,
+        validate_structure=False,
+        feedback=None,
+    ):
         """Main static method used to launch the bend reduction.
 
         :param: [QgsFeatures] qgs_features: List of features to process.
@@ -303,8 +416,15 @@ class ReduceBend:
         :rtype: RbResult
         """
 
-        rb = ReduceBend(qgs_in_features, diameter_tol, smooth_line, flag_del_outer, flag_del_inner, validate_structure,
-                        feedback)
+        rb = ReduceBend(
+            qgs_in_features,
+            diameter_tol,
+            smooth_line,
+            flag_del_outer,
+            flag_del_inner,
+            validate_structure,
+            feedback,
+        )
         results = rb.reduce_bends()
 
         return results
@@ -313,10 +433,10 @@ class ReduceBend:
     def _extract_polygon_attributes(qgs_geom):
         """Static method to calculate the area and perimeter of a LineString.
 
-       :param: QgsGeometry qgs_geom: Geometry to process.
-       :return: Area and perimeter of the geometry.
-       :rtype: Tuple
-       """
+        :param: QgsGeometry qgs_geom: Geometry to process.
+        :return: Area and perimeter of the geometry.
+        :rtype: Tuple
+        """
 
         qgs_line_string = qgs_geom.constGet()
         qgs_pol = QgsPolygon(qgs_line_string.clone())
@@ -350,12 +470,14 @@ class ReduceBend:
             """
 
             if rb_geom.qgs_geom.constGet().isClosed():
-                ret_value = rb_geom.bends[(i+1)%len(rb_geom.bends)].to_reduce  # Circular array
+                ret_value = rb_geom.bends[
+                    (i + 1) % len(rb_geom.bends)
+                ].to_reduce  # Circular array
             else:
-                if i+1 == len(rb_geom.bends):
+                if i + 1 == len(rb_geom.bends):
                     ret_value = False  # No next bend always OK
                 else:
-                    ret_value = rb_geom.bends[i+1].to_reduce
+                    ret_value = rb_geom.bends[i + 1].to_reduce
 
             return ret_value
 
@@ -368,12 +490,14 @@ class ReduceBend:
             """
 
             if rb_geom.qgs_geom.constGet().isClosed():
-                ret_value = rb_geom.bends[(i-1)%len(rb_geom.bends)].to_reduce  # Circular array
+                ret_value = rb_geom.bends[
+                    (i - 1) % len(rb_geom.bends)
+                ].to_reduce  # Circular array
             else:
-                if i-1 == -1:
+                if i - 1 == -1:
                     ret_value = False  # No previous bend always OK
                 else:
-                    ret_value = rb_geom.bends[i-1].to_reduce
+                    ret_value = rb_geom.bends[i - 1].to_reduce
 
             return ret_value
 
@@ -382,14 +506,20 @@ class ReduceBend:
             # A closed line cannot have only one bend
             x = rb_geom.qgs_geom.constGet().startPoint().x()
             y = rb_geom.qgs_geom.constGet().startPoint().y()
-            text = "Internal error with line string at {},{} No bend reduction done".format(x, y)
+            text = "Internal error with line string at {},{} No bend reduction done".format(
+                x, y
+            )
             feedback.pushInfo(text)
             rb_geom.bends = []  # Empty the bend list
 
-        lst_bends = [(bend.adj_area, i) for i, bend in enumerate(rb_geom.bends) if bend.area < min_adj_area]
+        lst_bends = [
+            (bend.adj_area, i)
+            for i, bend in enumerate(rb_geom.bends)
+            if bend.area < min_adj_area
+        ]
         lst_bends.sort(key=lambda item: item[0])
 
-        for (adj_area, i) in lst_bends:
+        for adj_area, i in lst_bends:
             if adj_area <= min_adj_area:
                 if is_previous_bend_to_reduce(i) or is_next_bend_to_reduce(i):
                     pass  # Cannot reduce a bend is previous or next marked for reduction
@@ -427,7 +557,7 @@ class ReduceBend:
         while j - 1 >= 2:
             i = bend.i
             while j - i >= 2:
-                alternate_bend = Bend(i, j, qgs_points[i:j+1])
+                alternate_bend = Bend(i, j, qgs_points[i : j + 1])
                 alternate_bends.append((alternate_bend.area, alternate_bend))
                 i += 1
             j -= 1
@@ -438,22 +568,42 @@ class ReduceBend:
 
         return alternate_bends
 
-    __slots__ = ('qgs_in_features', 'diameter_tol', 'smooth_line', 'flag_del_outer', 'flag_del_inner',
-                 'validate_structure', 'feedback', 'rb_collection', 'eps', 'rb_results', 'rb_features', 'rb_geoms',
-                 'bends_reduced')
+    __slots__ = (
+        "qgs_in_features",
+        "diameter_tol",
+        "smooth_line",
+        "flag_del_outer",
+        "flag_del_inner",
+        "validate_structure",
+        "feedback",
+        "rb_collection",
+        "eps",
+        "rb_results",
+        "rb_features",
+        "rb_geoms",
+        "bends_reduced",
+    )
 
-    def __init__(self, qgs_in_features, diameter_tol, smooth_line, flag_del_outer, flag_del_inner, validate_structure,
-                 feedback):
+    def __init__(
+        self,
+        qgs_in_features,
+        diameter_tol,
+        smooth_line,
+        flag_del_outer,
+        flag_del_inner,
+        validate_structure,
+        feedback,
+    ):
         """Constructor for the bend reduction.
 
-       :param: qgs_in_features: List of features to process.
-       :param: diameter_tol: Float tolerance of the diameter of the bend to reduce.
-       :param: smooth_line: Flag to smooth line after bend reduction if possible
-       :param: flag_del_outer: Flag to delete polygon if area below the diameter tolerance.
-       :param: flag_del_inner: Flag to delete polygon holes if area below the diameter tolerance.
-       :param: validate_structure: flag to validate internal data structure after processing (for debugging)
-       :param: feedback: QgsFeedback handle for interaction with QGIS.
-       """
+        :param: qgs_in_features: List of features to process.
+        :param: diameter_tol: Float tolerance of the diameter of the bend to reduce.
+        :param: smooth_line: Flag to smooth line after bend reduction if possible
+        :param: flag_del_outer: Flag to delete polygon if area below the diameter tolerance.
+        :param: flag_del_inner: Flag to delete polygon holes if area below the diameter tolerance.
+        :param: validate_structure: flag to validate internal data structure after processing (for debugging)
+        :param: feedback: QgsFeedback handle for interaction with QGIS.
+        """
 
         self.qgs_in_features = qgs_in_features
         self.diameter_tol = diameter_tol
@@ -476,13 +626,11 @@ class ReduceBend:
         :rtype: RbResult
         """
 
-
         #  Code used for the profiler (uncomment if needed)
-#        import cProfile, pstats, io
-#        from pstats import SortKey
-#        pr = cProfile.Profile()
-#        pr.enable()
-
+        #        import cProfile, pstats, io
+        #        from pstats import SortKey
+        #        pr = cProfile.Profile()
+        #        pr.enable()
 
         # Calculates the epsilon and initialize some stats and results value
         self.eps = Epsilon(self.qgs_in_features)
@@ -508,23 +656,27 @@ class ReduceBend:
             self.manage_smooth_line(self.feedback)
 
         # Recreate the QgsFeature
-        qgs_features_out = [rb_feature.get_qgs_feature() for rb_feature in self.rb_features]
+        qgs_features_out = [
+            rb_feature.get_qgs_feature() for rb_feature in self.rb_features
+        ]
 
         # Set return values
         self.rb_results.out_nbr_features = len(qgs_features_out)
         self.rb_results.qgs_features_out = qgs_features_out
 
         # Validate inner spatial structure. For debug purpose only
-        if self.rb_results.is_structure_valid:
-            self.rb_collection.validate_integrity(self.rb_geoms)
+        if self.validate_structure:
+            self.rb_results.is_structure_valid = self.rb_collection.validate_integrity(
+                self.rb_geoms
+            )
 
         #  Code used for the profiler (uncomment if needed)
- #       pr.disable()
- #       s = io.StringIO()
- #       sortby = SortKey.CUMULATIVE
- #       ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
- #       ps.print_stats()
- #       print(s.getvalue())
+        #       pr.disable()
+        #       s = io.StringIO()
+        #       sortby = SortKey.CUMULATIVE
+        #       ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        #       ps.print_stats()
+        #       print(s.getvalue())
 
         return self.rb_results
 
@@ -556,16 +708,20 @@ class ReduceBend:
         return rb_geoms
 
     def del_outer_inner_ring(self):
-        """This method deletes the polygons and polygon holes below the diameter tolerance
-
-        """
+        """This method deletes the polygons and polygon holes below the diameter tolerance"""
 
         # Loop over each rb_features
-        for i in reversed(range(len(self.rb_features))):  # List visited in reverse order for easier deletion of entry
+        for i in reversed(
+            range(len(self.rb_features))
+        ):  # List visited in reverse order for easier deletion of entry
             if isinstance(self.rb_features[i], GsPolygon):  # Only process Polygon
                 min_adj_area = Bend.calculate_min_adj_area(self.diameter_tol)
-                for j in reversed(range(len(self.rb_features[i].rb_geom))):  # List visited in reverse order (delete)
-                    area, perimeter = ReduceBend._extract_polygon_attributes(self.rb_features[i].rb_geom[j].qgs_geom)
+                for j in reversed(
+                    range(len(self.rb_features[i].rb_geom))
+                ):  # List visited in reverse order (delete)
+                    area, perimeter = ReduceBend._extract_polygon_attributes(
+                        self.rb_features[i].rb_geom[j].qgs_geom
+                    )
                     adj_area = Bend.calculate_adj_area(area, perimeter)
                     if j == 0:
                         # Process the exterior ring (outer ring always at position 0)
@@ -597,24 +753,29 @@ class ReduceBend:
         constraints_valid = False
         for alternate_bend in alternate_bends:
             b_box = alternate_bend.qgs_geom_bend.boundingBox()
-            qgs_geoms_with_itself, dummy = self.rb_collection.get_segment_intersect(rb_geom.id, b_box,
-                                                                                    alternate_bend.qgs_geom_old_subline)
+            qgs_geoms_with_itself, dummy = self.rb_collection.get_segment_intersect(
+                rb_geom.id, b_box, alternate_bend.qgs_geom_old_subline
+            )
 
             new_bend_ok = True
 
             gqs_ls_new_subline = alternate_bend.qgs_geom_new_subline.constGet().clone()
             geom_engine_subline = QgsGeometry.createGeometryEngine(gqs_ls_new_subline)
             for qgs_geom_potential in qgs_geoms_with_itself:
-                de_9IM_pattern = geom_engine_subline.relate(qgs_geom_potential.constGet().clone())
+                de_9IM_pattern = geom_engine_subline.relate(
+                    qgs_geom_potential.constGet().clone()
+                )
                 # de_9IM_pattern[0] == '0' means that their interiors intersect (crosses)
                 # de_9IM_pattern[1] == '0' means that one extremity is touching the interior of the other (touches)
-                if de_9IM_pattern[0] == '0' or de_9IM_pattern[1] == '0':
+                if de_9IM_pattern[0] == "0" or de_9IM_pattern[1] == "0":
                     # The new sub line intersect or touch with itself. The result would create a non OGC simple line
                     new_bend_ok = False
                     break
 
             if new_bend_ok:
-                rb_geom.bends[ind] = alternate_bend  # Reset the bend with the alternate bend
+                rb_geom.bends[ind] = (
+                    alternate_bend  # Reset the bend with the alternate bend
+                )
                 constraints_valid = True
                 break  # No need to process the next alternate bend
 
@@ -646,24 +807,35 @@ class ReduceBend:
         constraints_valid = True
         bend = rb_geom.bends[ind]
         b_box = bend.qgs_geom_bend.boundingBox()
-        qgs_geoms_with_itself, qgs_geoms_with_others = \
-            self.rb_collection.get_segment_intersect(rb_geom.id, b_box, bend.qgs_geom_old_subline)
+        qgs_geoms_with_itself, qgs_geoms_with_others = (
+            self.rb_collection.get_segment_intersect(
+                rb_geom.id, b_box, bend.qgs_geom_old_subline
+            )
+        )
 
         # First: check if the bend reduce line string is an OGC simple line
-        constraints_valid = GeoSimUtil.validate_simplicity(qgs_geoms_with_itself, bend.qgs_geom_new_subline)
+        constraints_valid = GeoSimUtil.validate_simplicity(
+            qgs_geoms_with_itself, bend.qgs_geom_new_subline
+        )
         if not constraints_valid:
             # The bend reduction caused self intersection; try to find an alternate bend
             alternate_bends = ReduceBend.find_alternate_bends(ind, rb_geom)
-            constraints_valid = self.validate_alternate_bend(alternate_bends, ind, rb_geom)
+            constraints_valid = self.validate_alternate_bend(
+                alternate_bends, ind, rb_geom
+            )
 
         # Second: check that the new line does not intersect any other line or points
         if constraints_valid:
-            constraints_valid = GeoSimUtil.validate_intersection(qgs_geoms_with_others, bend.qgs_geom_new_subline)
+            constraints_valid = GeoSimUtil.validate_intersection(
+                qgs_geoms_with_others, bend.qgs_geom_new_subline
+            )
 
         # Third: check that inside the bend to reduce there is no feature completely inside it.  This would cause a
         # sidedness or relative position error
         if constraints_valid:
-            constraints_valid = GeoSimUtil.validate_sidedness(qgs_geoms_with_others, bend.qgs_geom_bend)
+            constraints_valid = GeoSimUtil.validate_sidedness(
+                qgs_geoms_with_others, bend.qgs_geom_bend
+            )
 
         return constraints_valid
 
@@ -690,24 +862,30 @@ class ReduceBend:
 
         rb_geom = reduced_bend.rb_geom
         b_box = reduced_bend.qgs_geom_smooth_polygon.boundingBox()
-        qgs_geoms_with_itself, qgs_geoms_with_others = \
-            self.rb_collection.get_segment_intersect(rb_geom.id, b_box, reduced_bend.qgs_geom_old_subline)
+        qgs_geoms_with_itself, qgs_geoms_with_others = (
+            self.rb_collection.get_segment_intersect(
+                rb_geom.id, b_box, reduced_bend.qgs_geom_old_subline
+            )
+        )
 
         # First: check if the bend reduce line string is an OGC simple line
         # We test with a tiny smaller line to ease the testing and false positive error
-        constraints_valid = GeoSimUtil.validate_simplicity(qgs_geoms_with_itself,
-                                                           reduced_bend.qgs_geom_smooth_line)
+        constraints_valid = GeoSimUtil.validate_simplicity(
+            qgs_geoms_with_itself, reduced_bend.qgs_geom_smooth_line
+        )
 
         # Second: check that the new line does not intersect any other line or points
         if constraints_valid:
-            constraints_valid = GeoSimUtil.validate_intersection(qgs_geoms_with_others,
-                                                                 reduced_bend.qgs_geom_smooth_line)
+            constraints_valid = GeoSimUtil.validate_intersection(
+                qgs_geoms_with_others, reduced_bend.qgs_geom_smooth_line
+            )
 
         # Third: check that inside the bend to reduce there is no feature completely inside it.  This would cause a
         # sidedness or relative position error
         if constraints_valid:
-            constraints_valid = GeoSimUtil.validate_sidedness(qgs_geoms_with_others,
-                                                              reduced_bend.qgs_geom_smooth_polygon)
+            constraints_valid = GeoSimUtil.validate_sidedness(
+                qgs_geoms_with_others, reduced_bend.qgs_geom_smooth_polygon
+            )
 
         return constraints_valid
 
@@ -736,7 +914,9 @@ class ReduceBend:
                     bend = rb_geom.bends[ind]
                     qgs_pnt_i = rb_geom.qgs_geom.vertexAt(bend.i)
                     qgs_pnt_j = rb_geom.qgs_geom.vertexAt(bend.j)
-                    self.bends_reduced.append(BendReduced(rb_geom, qgs_pnt_i, qgs_pnt_j, bend.qgs_geom_bend))
+                    self.bends_reduced.append(
+                        BendReduced(rb_geom, qgs_pnt_i, qgs_pnt_j, bend.qgs_geom_bend)
+                    )
                     self.rb_collection.delete_vertex(rb_geom, bend.i + 1, bend.j - 1)
 
             return counter
@@ -745,13 +925,17 @@ class ReduceBend:
         if len(rb_geom.bends) >= 1:
             is_closed = rb_geom.qgs_geom.constGet().isClosed()
             if is_closed:
-                for ind in reversed(range(1,len(rb_geom.bends)-1)):  # Do not process the first/last bend
+                for ind in reversed(
+                    range(1, len(rb_geom.bends) - 1)
+                ):  # Do not process the first/last bend
                     nbr_bend_reduced += _process_one_bend(ind)
                 if nbr_bend_reduced == 0:
                     # Only process the first/last bend of a closed line when no other bend need to be reduced
                     for ind in [0, -1]:
                         if rb_geom.bends[ind].to_reduce:
-                            nbr_bend_reduced += _process_one_bend(ind)  # Process last bend that was omitted previouly
+                            nbr_bend_reduced += _process_one_bend(
+                                ind
+                            )  # Process last bend that was omitted previouly
                             break
             else:
                 for ind in reversed(range(len(rb_geom.bends))):
@@ -773,14 +957,20 @@ class ReduceBend:
         :param: feedback: QgsFeedback handle to update the progress bar
         """
 
-        progress_bar = ProgressBar(feedback, len(self.bends_reduced), "Bend smoothing...")
+        progress_bar = ProgressBar(
+            feedback, len(self.bends_reduced), "Bend smoothing..."
+        )
         for i, bend_reduced in enumerate(self.bends_reduced):
             progress_bar.set_value(i)
             bend_reduced.set_values(self.diameter_tol)
             if bend_reduced.is_line_smoothable:
                 if self.validate_constraints_smooth(bend_reduced):
-                    self.rb_collection.add_vertex(bend_reduced.rb_geom, bend_reduced.i, bend_reduced.j,
-                                                  bend_reduced.qgs_geom_smooth_line)
+                    self.rb_collection.add_vertex(
+                        bend_reduced.rb_geom,
+                        bend_reduced.i,
+                        bend_reduced.j,
+                        bend_reduced.qgs_geom_smooth_line,
+                    )
                     self.rb_results.nbr_line_smooth += 1
                 else:
                     # Smooth line validation of spatial constraint did not pass stay with the straight line
@@ -802,21 +992,37 @@ class ReduceBend:
         """
 
         qgs_line_string = rb_geom.qgs_geom.constGet()
-        xy = [(qgs_line_string.xAt(i), qgs_line_string.yAt(i)) for i in range(qgs_line_string.numPoints())]
+        xy = [
+            (qgs_line_string.xAt(i), qgs_line_string.yAt(i))
+            for i in range(qgs_line_string.numPoints())
+        ]
         if len(xy) >= 3:
             if qgs_line_string.isClosed():
                 # Manage circularity of a closed line
-                xy.insert(0, xy[-2])  # To compensate the fact that first/last vertice are the same
+                xy.insert(
+                    0, xy[-2]
+                )  # To compensate the fact that first/last vertice are the same
 
-            angles = [QgsGeometryUtils.angleBetweenThreePoints(xy[i - 1][0], xy[i - 1][1], xy[i][0], xy[i][1],
-                                                               xy[i + 1][0], xy[i + 1][1]) for i in
-                      range(1, len(xy) - 1)]
+            angles = [
+                QgsGeometryUtils.angleBetweenThreePoints(
+                    xy[i - 1][0],
+                    xy[i - 1][1],
+                    xy[i][0],
+                    xy[i][1],
+                    xy[i + 1][0],
+                    xy[i + 1][1],
+                )
+                for i in range(1, len(xy) - 1)
+            ]
         else:
             angles = []
 
         # Transform each angle into: Flat, Clockwise or anti clockwise
         for i, angle in enumerate(angles):
-            if abs(angle - math.pi) <= Epsilon.ZERO_ANGLE or abs(angle) <= Epsilon.ZERO_ANGLE:
+            if (
+                abs(angle - math.pi) <= Epsilon.ZERO_ANGLE
+                or abs(angle) <= Epsilon.ZERO_ANGLE
+            ):
                 angles[i] = FLAT_ANGLE
             elif angle >= math.pi:
                 angles[i] = CLOCK_WISE
@@ -847,7 +1053,7 @@ class ReduceBend:
                 if is_closed:
                     self.rb_collection.delete_vertex(rb_geom, i, i)
                 else:
-                    self.rb_collection.delete_vertex(rb_geom, i+1, i+1)
+                    self.rb_collection.delete_vertex(rb_geom, i + 1, i + 1)
                 # Update the list of angles
                 del angles[i]
 
@@ -875,35 +1081,41 @@ class ReduceBend:
         rb_geom.bends = []
         if len(angles) >= 1:
             # Create the list of inflexions
-            inflexions = [Inflexion(start=None, end=None)]  # Initialize with empty inflexion
-            for k in range(len(angles)-1):
-                if angles[k] * angles[k+1] == -1:
-                    inflexions[-1].end = k+1  # Change of inflexion in the line
+            inflexions = [
+                Inflexion(start=None, end=None)
+            ]  # Initialize with empty inflexion
+            for k in range(len(angles) - 1):
+                if angles[k] * angles[k + 1] == -1:
+                    inflexions[-1].end = k + 1  # Change of inflexion in the line
                     inflexions.append(Inflexion(start=k, end=None))
 
             qgs_points = rb_geom.qgs_geom.constGet().points()
             if rb_geom.qgs_geom.constGet().isClosed():
                 if angles[-1] * angles[0] == -1:  # circular
                     inflexions[-1].end = 0  # Change of inflexion in the line
-                    inflexions.append(Inflexion(start=len(angles)-1, end=None))
+                    inflexions.append(Inflexion(start=len(angles) - 1, end=None))
                 # Adjust inflexion for circular line
                 inflexions[0].start = inflexions[-1].start
                 del inflexions[-1]
             else:
                 # Adjust bend for open line
                 inflexions[0].start = 0
-                inflexions[-1].end = len(qgs_points)-1
+                inflexions[-1].end = len(qgs_points) - 1
 
             # Transform inflexions into a list of bend
             for inflexion in inflexions:
                 if inflexion.start < inflexion.end:
-                    sub_qgs_points = qgs_points[inflexion.start:inflexion.end+1]
+                    sub_qgs_points = qgs_points[inflexion.start : inflexion.end + 1]
                 elif inflexion.start > inflexion.end:
-                    sub_qgs_points = qgs_points[inflexion.start:] + qgs_points[:inflexion.end+1]
+                    sub_qgs_points = (
+                        qgs_points[inflexion.start :] + qgs_points[: inflexion.end + 1]
+                    )
                 else:
                     # Special case (first=start) when there is only 2 bends in a closed line
-                    sub_qgs_points = qgs_points[0:len(qgs_points)-1]
-                rb_geom.bends.append(Bend(inflexion.start, inflexion.end, sub_qgs_points))
+                    sub_qgs_points = qgs_points[0 : len(qgs_points) - 1]
+                rb_geom.bends.append(
+                    Bend(inflexion.start, inflexion.end, sub_qgs_points)
+                )
 
         else:
             rb_geom.is_simplest = True
@@ -919,28 +1131,36 @@ class ReduceBend:
 
         while True:
             self.rb_results.nbr_pass += 1
-            progress_bar = ProgressBar(self.feedback, len(self.rb_geoms),
-                                       "Iteration: {0}".format(self.rb_results.nbr_pass))
+            progress_bar = ProgressBar(
+                self.feedback,
+                len(self.rb_geoms),
+                "Iteration: {0}".format(self.rb_results.nbr_pass),
+            )
             nbr_bend_reduced = 0
             nbr_bend_detected = 0
             for i, rb_geom in enumerate(self.rb_geoms):
                 if self.feedback.isCanceled():
                     break
                 progress_bar.set_value(i)
-                if not rb_geom.is_simplest:  # Only process geometry that are not at simplest form
-
+                if (
+                    not rb_geom.is_simplest
+                ):  # Only process geometry that are not at simplest form
                     if rb_geom.bends is None:
                         # Recalculate new bend position
                         angles = ReduceBend.get_angles(rb_geom)
                         self.delete_co_linear(angles, rb_geom)
                         tmp_nbr_bend_detected = ReduceBend.detect_bends(angles, rb_geom)
-                        ReduceBend.flag_bend_to_reduce(self.feedback, rb_geom, self.diameter_tol)
+                        ReduceBend.flag_bend_to_reduce(
+                            self.feedback, rb_geom, self.diameter_tol
+                        )
                     nbr_bend_reduced += self.process_bends(rb_geom)
                     nbr_bend_detected += tmp_nbr_bend_detected
 
             self.rb_results.nbr_bend_reduced += nbr_bend_reduced
             if self.rb_results.nbr_pass == 1:
-                self.rb_results.nbr_bend_detected = nbr_bend_detected  # Only keep the value of the first pass
+                self.rb_results.nbr_bend_detected = (
+                    nbr_bend_detected  # Only keep the value of the first pass
+                )
 
             # Breaking condition for the while loop
             self.feedback.pushInfo("Bend reduced: {}".format(nbr_bend_reduced))

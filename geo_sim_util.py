@@ -29,8 +29,16 @@ QGIS Plugin for Bend reduction
 import math
 import sys
 from abc import ABC, abstractmethod
-from qgis.core import (QgsLineString, QgsWkbTypes, QgsSpatialIndex, QgsGeometry, QgsPolygon,
-                       QgsGeometryUtils, QgsRectangle, QgsProcessingException)
+from qgis.core import (
+    QgsLineString,
+    QgsWkbTypes,
+    QgsSpatialIndex,
+    QgsGeometry,
+    QgsPolygon,
+    QgsGeometryUtils,
+    QgsRectangle,
+    QgsProcessingException,
+)
 
 
 class Epsilon:
@@ -40,7 +48,7 @@ class Epsilon:
     ZERO_ABSOLUTE = None
     ZERO_ANGLE = None
 
-    __slots__ = '_zero_relative', '_zero_absolute', '_zero_angle', '_map_range'
+    __slots__ = "_zero_relative", "_zero_absolute", "_zero_angle", "_map_range"
 
     def __init__(self, features):
         """Constructor that initialize the Epsilon (near zero) object.
@@ -66,15 +74,15 @@ class Epsilon:
         delta_y = abs(b_box.yMinimum()) + abs(b_box.yMaximum())
         dynamic_xy = max(delta_x, delta_y)  # Dynamic of the bounding box
         if dynamic_xy == 0.0:
-            dynamic_xy = 1.0E-15
-        log_loss = int(math.log(dynamic_xy, 10)+1)
+            dynamic_xy = 1.0e-15
+        log_loss = int(math.log(dynamic_xy, 10) + 1)
         max_digit = 15  # Number of meaningful digits for real number
         security = 2  # Keep 2 order of magnitude of security
         abs_digit = max_digit - security
         rel_digit = max_digit - log_loss - security
-        self._zero_relative = (1. / (10**rel_digit))
-        self._zero_absolute = (1. / (10**abs_digit))
-        self._zero_angle = math.radians(.0001)  # Angle used to decide a flat angle
+        self._zero_relative = 1.0 / (10**rel_digit)
+        self._zero_absolute = 1.0 / (10**abs_digit)
+        self._zero_angle = math.radians(0.0001)  # Angle used to decide a flat angle
 
     def set_class_variables(self):
         """Set the different epsilon values.
@@ -91,18 +99,16 @@ class Epsilon:
 
 
 class ProgressBar:
-    """Class used for managing the progress bar in the QGIS desktop
-
-    """
+    """Class used for managing the progress bar in the QGIS desktop"""
 
     def __init__(self, feedback, max_value, message=None):
         """Constructor of the ProgressBar class
 
         :param: feedback: feedback handle for interaction with the QGIS desktop
-        :param: max_value: Integer of the maximum value """
+        :param: max_value: Integer of the maximum value"""
 
         self.feedback = feedback
-        self.max_value  = max_value
+        self.max_value = max_value
         self.progress_bar_value = 0
         self.feedback.setProgress(self.progress_bar_value)
         if message is not None or message != "":
@@ -115,12 +121,10 @@ class ProgressBar:
 
         """
 
-        percent_value = int(value/self.max_value*100.)
+        percent_value = int(value / self.max_value * 100.0)
         if percent_value != self.progress_bar_value:
             self.progress_bar_value = percent_value
             self.feedback.setProgress(self.progress_bar_value)
-
-
 
 
 class GsCollection:
@@ -129,12 +133,10 @@ class GsCollection:
     QgsSpatialIndex class is used to store and retrieve the features.
     """
 
-    __slots__ = ('_spatial_index', '_dict_qgs_segment', '_id_qgs_segment')
+    __slots__ = ("_spatial_index", "_dict_qgs_segment", "_id_qgs_segment")
 
     def __init__(self):
-        """Constructor that initialize the GsCollection.
-
-        """
+        """Constructor that initialize the GsCollection."""
 
         self._spatial_index = QgsSpatialIndex()
         self._dict_qgs_segment = {}  # Contains a reference to the original geometry
@@ -161,7 +163,10 @@ class GsCollection:
         """
 
         id_segment = self._get_next_id_segment()
-        self._dict_qgs_segment[id_segment] = (geom_id, qgs_geom)  # Reference to the RbGeom ID and geometry
+        self._dict_qgs_segment[id_segment] = (
+            geom_id,
+            qgs_geom,
+        )  # Reference to the RbGeom ID and geometry
 
         return id_segment, qgs_geom.boundingBox()
 
@@ -175,16 +180,22 @@ class GsCollection:
         :feedback: QgsFeedback handle used to update the progress bar
         """
 
-        progress_bar = ProgressBar(feedback, len(rb_geoms), "Building internal structure...")
+        progress_bar = ProgressBar(
+            feedback, len(rb_geoms), "Building internal structure..."
+        )
         for val, rb_geom in enumerate(rb_geoms):
             progress_bar.set_value(val)
             qgs_rectangles = []
             if rb_geom.qgs_geom.wkbType() == QgsWkbTypes.Point:
-                qgs_rectangles.append(self._create_rectangle(rb_geom.id, rb_geom.qgs_geom))
+                qgs_rectangles.append(
+                    self._create_rectangle(rb_geom.id, rb_geom.qgs_geom)
+                )
             else:
                 qgs_points = rb_geom.qgs_geom.constGet().points()
-                for i in range(0, (len(qgs_points)-1)):
-                    qgs_geom = QgsGeometry(QgsLineString(qgs_points[i], qgs_points[i+1]))
+                for i in range(0, (len(qgs_points) - 1)):
+                    qgs_geom = QgsGeometry(
+                        QgsLineString(qgs_points[i], qgs_points[i + 1])
+                    )
                     qgs_rectangles.append(self._create_rectangle(rb_geom.id, qgs_geom))
 
             for geom_id, qgs_rectangle in qgs_rectangles:
@@ -207,7 +218,9 @@ class GsCollection:
 
         qgs_geoms_with_itself = []
         qgs_geoms_with_others = []
-        qgs_rectangle.grow(Epsilon.ZERO_RELATIVE*100.)  # Always increase the b_box to avoid degenerated b_box
+        qgs_rectangle.grow(
+            Epsilon.ZERO_RELATIVE * 100.0
+        )  # Always increase the b_box to avoid degenerated b_box
         ids = self._spatial_index.intersects(qgs_rectangle)
         for geom_id in ids:
             target_qgs_geom_id, target_qgs_geom = self._dict_qgs_segment[geom_id]
@@ -238,16 +251,23 @@ class GsCollection:
         qgs_geom_to_delete = QgsGeometry(QgsLineString(qgs_pnt0, qgs_pnt1))
         qgs_mid_point = QgsGeometryUtils.midpoint(qgs_pnt0, qgs_pnt1)
         qgs_rectangle = qgs_mid_point.boundingBox()
-        qgs_rectangle.grow(Epsilon.ZERO_RELATIVE*100)
+        qgs_rectangle.grow(Epsilon.ZERO_RELATIVE * 100)
         deleted = False
         ids = self._spatial_index.intersects(qgs_rectangle)
         for geom_id in ids:
-            target_qgs_geom_id, target_qgs_geom = self._dict_qgs_segment[geom_id]  # Extract id and geometry
+            target_qgs_geom_id, target_qgs_geom = self._dict_qgs_segment[
+                geom_id
+            ]  # Extract id and geometry
             if qgs_geom_id == target_qgs_geom_id:
                 # Only check for the same ID
-                if target_qgs_geom.equals(qgs_geom_to_delete):  # Check if it's the same geometry
+                if target_qgs_geom.equals(
+                    qgs_geom_to_delete
+                ):  # Check if it's the same geometry
                     deleted = True
-                    self._dict_qgs_segment[geom_id] = (None, None)  # Delete from the internal structure
+                    self._dict_qgs_segment[geom_id] = (
+                        None,
+                        None,
+                    )  # Delete from the internal structure
                     break
 
         if not deleted:
@@ -267,19 +287,19 @@ class GsCollection:
         """
 
         is_closed = rb_geom.qgs_geom.constGet().isClosed()
-        v_ids_to_del = list(range(v_id_start, v_id_end+1))
+        v_ids_to_del = list(range(v_id_start, v_id_end + 1))
         if v_id_start == 0 and is_closed:
             # Special case for closed line where we simulate a circular array
             nbr_vertice = rb_geom.qgs_geom.constGet().numPoints()
             v_ids_to_del.insert(0, nbr_vertice - 2)
         else:
-            v_ids_to_del.insert(0, v_ids_to_del[0]-1)
-        v_ids_to_del.append(v_ids_to_del[-1]+1)
+            v_ids_to_del.insert(0, v_ids_to_del[0] - 1)
+        v_ids_to_del.append(v_ids_to_del[-1] + 1)
 
         # Delete the line segment in the spatial index
-        for i in range(len(v_ids_to_del)-1):
+        for i in range(len(v_ids_to_del) - 1):
             qgs_pnt0 = rb_geom.qgs_geom.vertexAt(v_ids_to_del[i])
-            qgs_pnt1 = rb_geom.qgs_geom.vertexAt(v_ids_to_del[i+1])
+            qgs_pnt1 = rb_geom.qgs_geom.vertexAt(v_ids_to_del[i + 1])
             self._delete_segment(rb_geom.id, qgs_pnt0, qgs_pnt1)
 
         # Add the new line segment in the spatial index
@@ -290,13 +310,13 @@ class GsCollection:
         self._spatial_index.addFeature(geom_id, qgs_rectangle)
 
         # Delete the vertex in the line string geometry
-        for v_id_to_del in reversed(range(v_id_start, v_id_end+1)):
+        for v_id_to_del in reversed(range(v_id_start, v_id_end + 1)):
             rb_geom.qgs_geom.deleteVertex(v_id_to_del)
             if v_id_start == 0 and is_closed:
                 # Special case for closed line where we simulate a circular array
                 nbr_vertice = rb_geom.qgs_geom.constGet().numPoints()
                 qgs_pnt_first = rb_geom.qgs_geom.vertexAt(0)
-                rb_geom.qgs_geom.insertVertex(qgs_pnt_first, nbr_vertice-1)
+                rb_geom.qgs_geom.insertVertex(qgs_pnt_first, nbr_vertice - 1)
                 rb_geom.qgs_geom.deleteVertex(nbr_vertice)
 
         return
@@ -313,26 +333,27 @@ class GsCollection:
 
         num_points = rb_geom.qgs_geom.constGet().numPoints()
         # Manage closes line where first/last vertice are the same
-        if v_id_start == num_points-1:
+        if v_id_start == num_points - 1:
             v_id_start = 0  # Last point is the same as the first vertice
         if v_id_end == -1:
-            v_id_end = num_points -2  # Preceding point the first/last vertice
+            v_id_end = num_points - 2  # Preceding point the first/last vertice
 
         if v_id_start <= v_id_end:
             self._delete_vertex(rb_geom, v_id_start, v_id_end)
         else:
-            self._delete_vertex(rb_geom, v_id_start, num_points-2)
+            self._delete_vertex(rb_geom, v_id_start, num_points - 2)
             self._delete_vertex(rb_geom, 0, 0)
             if v_id_end > 0:
                 self._delete_vertex(rb_geom, 1, v_id_end)
-#            lst_vertex_to_del = list(range(v_id_start, num_points)) + list(range(0, v_id_end+1))
-#            for vertex_to_del in lst_vertex_to_del:
-#                self._delete_vertex(rb_geom, vertex_to_del, vertex_to_del)
 
-#        num_points = rb_geom.qgs_geom.constGet().numPoints()
-#        lst_vertex_to_del = list(range(v_id_start, num_points)) + list(range(0, v_id_end + 1))
-#        for vertex_to_del in lst_vertex_to_del:
-#            self._delete_vertex(rb_geom, vertex_to_del, vertex_to_del)
+    #            lst_vertex_to_del = list(range(v_id_start, num_points)) + list(range(0, v_id_end+1))
+    #            for vertex_to_del in lst_vertex_to_del:
+    #                self._delete_vertex(rb_geom, vertex_to_del, vertex_to_del)
+
+    #        num_points = rb_geom.qgs_geom.constGet().numPoints()
+    #        lst_vertex_to_del = list(range(v_id_start, num_points)) + list(range(0, v_id_end + 1))
+    #        for vertex_to_del in lst_vertex_to_del:
+    #            self._delete_vertex(rb_geom, vertex_to_del, vertex_to_del)
 
     def add_vertex(self, rb_geom, bend_i, bend_j, qgs_geom_new_subline):
         """Update the line segment in the spatial index
@@ -356,9 +377,13 @@ class GsCollection:
             rb_geom.qgs_geom.insertVertex(qgs_point, bend_j)
 
         # Add the new segment in the spatial container
-        for i in range(len(qgs_points)-1):
-            qgs_geom_segment = QgsGeometry(QgsLineString(qgs_points[i], qgs_points[i+1]))
-            geom_id, qgs_rectangle = self._create_rectangle(rb_geom.id, qgs_geom_segment)
+        for i in range(len(qgs_points) - 1):
+            qgs_geom_segment = QgsGeometry(
+                QgsLineString(qgs_points[i], qgs_points[i + 1])
+            )
+            geom_id, qgs_rectangle = self._create_rectangle(
+                rb_geom.id, qgs_geom_segment
+            )
             self._spatial_index.addFeature(geom_id, qgs_rectangle)
 
         return
@@ -381,21 +406,31 @@ class GsCollection:
             qgs_line_string = rb_geom.qgs_geom.constGet()
             if qgs_line_string.wkbType() == QgsWkbTypes.LineString:
                 qgs_points = qgs_line_string.points()
-                for i in range(len(qgs_points)-1):
-                    self._delete_segment(rb_geom.id, qgs_points[i], qgs_points[i+1])
+                for i in range(len(qgs_points) - 1):
+                    self._delete_segment(rb_geom.id, qgs_points[i], qgs_points[i + 1])
 
         if is_structure_valid:
             # Verify that there are no other feature in the spatial index; except for QgsPoint
-            qgs_rectangle = QgsRectangle(-sys.float_info.max, -sys.float_info.max,
-                                         sys.float_info.max, sys.float_info.max)
+            qgs_rectangle = QgsRectangle(
+                -sys.float_info.max,
+                -sys.float_info.max,
+                sys.float_info.max,
+                sys.float_info.max,
+            )
             feat_ids = self._spatial_index.intersects(qgs_rectangle)
             for feat_id in feat_ids:
-                qgs_geom = self._spatial_index.geometry(feat_id)
+                target_qgs_geom_id, qgs_geom = self._dict_qgs_segment.get(
+                    feat_id, (None, None)
+                )
+                if target_qgs_geom_id is None or qgs_geom is None:
+                    # Segment deleted from the internal structure
+                    continue
                 if qgs_geom.wkbType() == QgsWkbTypes.Point:
                     pass
                 else:
                     # Error
                     is_structure_valid = False
+                    break
 
         return is_structure_valid
 
@@ -417,8 +452,13 @@ class GsFeature(ABC):
         :rtype: bool
         """
 
-        val = feature_type in [QgsWkbTypes.Point, QgsWkbTypes.Point25D, QgsWkbTypes.PointM, QgsWkbTypes.PointZ,
-                               QgsWkbTypes.PointZM]
+        val = feature_type in [
+            QgsWkbTypes.Point,
+            QgsWkbTypes.Point25D,
+            QgsWkbTypes.PointM,
+            QgsWkbTypes.PointZ,
+            QgsWkbTypes.PointZM,
+        ]
 
         return val
 
@@ -431,8 +471,13 @@ class GsFeature(ABC):
         :rtype: bool
         """
 
-        val = feature_type in [QgsWkbTypes.LineString, QgsWkbTypes.LineString25D, QgsWkbTypes.LineStringZ,
-                               QgsWkbTypes.LineStringM, QgsWkbTypes.LineStringZM]
+        val = feature_type in [
+            QgsWkbTypes.LineString,
+            QgsWkbTypes.LineString25D,
+            QgsWkbTypes.LineStringZ,
+            QgsWkbTypes.LineStringM,
+            QgsWkbTypes.LineStringZM,
+        ]
 
         return val
 
@@ -444,8 +489,13 @@ class GsFeature(ABC):
         :return: True if a Polygon False otherwise
         :rtype: bool
         """
-        val = feature_type in [QgsWkbTypes.Polygon, QgsWkbTypes.Polygon25D, QgsWkbTypes.PolygonZ, QgsWkbTypes.PolygonM,
-                               QgsWkbTypes.PolygonZM]
+        val = feature_type in [
+            QgsWkbTypes.Polygon,
+            QgsWkbTypes.Polygon25D,
+            QgsWkbTypes.PolygonZ,
+            QgsWkbTypes.PolygonM,
+            QgsWkbTypes.PolygonZM,
+        ]
 
         return val
 
@@ -489,13 +539,11 @@ class GsFeature(ABC):
 
     @abstractmethod
     def get_rb_geom(self):
-        """Define an abstract method.
-        """
+        """Define an abstract method."""
 
     @abstractmethod
     def get_qgs_feature(self):
-        """Define an abstract method.
-        """
+        """Define an abstract method."""
 
 
 class GsPolygon(GsFeature):
@@ -509,11 +557,15 @@ class GsPolygon(GsFeature):
 
         super().__init__(qgs_feature)
         if self.qgs_geom.wkbType() != QgsWkbTypes.Polygon:
-            self.qgs_geom = self.qgs_geom.coerceToType(QgsWkbTypes.Polygon)  # Force geometry to be a QgsPolygon
+            self.qgs_geom = self.qgs_geom.coerceToType(
+                QgsWkbTypes.Polygon
+            )  # Force geometry to be a QgsPolygon
         # Transform geometry into a list a LineString first ring being outer ring
         self.qgs_geom = self.qgs_geom.coerceToType(QgsWkbTypes.LineString)
         # Breaks the rings into a list of closed RbGeom (LineString). The first one being the outer ring
-        self.rb_geom = [RbGeom(qgs_geom, QgsWkbTypes.Polygon) for qgs_geom in self.qgs_geom]
+        self.rb_geom = [
+            RbGeom(qgs_geom, QgsWkbTypes.Polygon) for qgs_geom in self.qgs_geom
+        ]
         self.qgs_geom = None
 
     def get_rb_geom(self):
@@ -542,8 +594,7 @@ class GsPolygon(GsFeature):
 
 
 class GsLineString(GsFeature):
-    """Class managing a GsLineString.
-    """
+    """Class managing a GsLineString."""
 
     def __init__(self, qgs_feature):
         """Constructor that breaks the LineString into a list of LineString (RbGeom).
@@ -552,7 +603,9 @@ class GsLineString(GsFeature):
         """
         super().__init__(qgs_feature)
         if self.qgs_geom.wkbType() != QgsWkbTypes.LineString:
-            self.qgs_geom = self.qgs_geom.coerceToType(QgsWkbTypes.LineString)  # Force geometry to a QgsPoint
+            self.qgs_geom = self.qgs_geom.coerceToType(
+                QgsWkbTypes.LineString
+            )  # Force geometry to a QgsPoint
         self.rb_geom = [RbGeom(self.qgs_geom, QgsWkbTypes.LineString)]
         self.qgs_geom = None
 
@@ -579,8 +632,7 @@ class GsLineString(GsFeature):
 
 
 class GsPoint(GsFeature):
-    """Class managing a GsPoint
-    """
+    """Class managing a GsPoint"""
 
     def __init__(self, qgs_feature):
         """Constructor that breaks the Point into a list of Point (RbGeom).
@@ -590,7 +642,9 @@ class GsPoint(GsFeature):
 
         super().__init__(qgs_feature)
         if self.qgs_geom.wkbType() != QgsWkbTypes.Point:
-            self.qgs_geom = self.qgs_geom.coerceToType(QgsWkbTypes.Point)  # Force geometry to QgsPoint
+            self.qgs_geom = self.qgs_geom.coerceToType(
+                QgsWkbTypes.Point
+            )  # Force geometry to QgsPoint
         self.rb_geom = [RbGeom(self.qgs_geom, QgsWkbTypes.Point)]
         self.rb_geom[0].is_simplest = True  # A point cannot be reduced
         self.qgs_geom = None
@@ -622,7 +676,14 @@ class GsPoint(GsFeature):
 class RbGeom:
     """Class defining the line string used for the bend reduction"""
 
-    __slots__ = ('id', 'original_geom_type', 'is_simplest', 'qgs_geom', 'bends', 'need_pivot')
+    __slots__ = (
+        "id",
+        "original_geom_type",
+        "is_simplest",
+        "qgs_geom",
+        "bends",
+        "need_pivot",
+    )
 
     _id_counter = 0  # Unique ID counter
 
@@ -663,13 +724,21 @@ class RbGeom:
                 if qgs_geometry.isClosed():
                     self.need_pivot = True  # A closed lined string can be pivoted
             else:
-                self.is_simplest = True  # Degenerated LineString... Do not try to simplify...
+                self.is_simplest = (
+                    True  # Degenerated LineString... Do not try to simplify...
+                )
 
 
 class SimGeom:
     """Class defining the line string used for the douglas peucker simplification"""
 
-    __slots__ = ('id', 'original_geom_type', 'is_simplest', 'qgs_geom', 'furthest_index')
+    __slots__ = (
+        "id",
+        "original_geom_type",
+        "is_simplest",
+        "qgs_geom",
+        "furthest_index",
+    )
 
     _id_counter = 0  # Unique ID counter
 
@@ -707,7 +776,9 @@ class SimGeom:
             # Original geometry is LineString or Polygon
             if qgs_geometry.length() >= Epsilon.ZERO_RELATIVE:
                 if qgs_geometry.isClosed():  # Closed LineString
-                    qgs_polygon = QgsPolygon(qgs_geometry.clone())  # Create QgsPolygon to calculate area
+                    qgs_polygon = QgsPolygon(
+                        qgs_geometry.clone()
+                    )  # Create QgsPolygon to calculate area
                     if qgs_polygon.area() > Epsilon.ZERO_RELATIVE:
                         if qgs_geometry.numPoints() <= 4:
                             self.is_simplest = True  # Cannot simplify a closed line with less than 4 vertices
@@ -715,7 +786,9 @@ class SimGeom:
                         self.is_simplest = True  # Degenerated area cannot simplify
                 else:
                     if qgs_geometry.numPoints() <= 2:
-                        self.is_simplest = True  # Cannot simplify a line with less than 2 vertice
+                        self.is_simplest = (
+                            True  # Cannot simplify a line with less than 2 vertice
+                        )
             else:
                 self.is_simplest = True  # Degenerated area cannot simplify
 
@@ -727,12 +800,12 @@ class Bend:
     def calculate_min_adj_area(diameter_tol):
         """Static method to calculate the adjusted area of the maximum diameter tolerance.
 
-       :param: diameter_tol: float diameter tolerance to used for bend reduction
-       :return: Minimum adjusted area of a polygon to reduce
-       :rtype: Real
-       """
+        :param: diameter_tol: float diameter tolerance to used for bend reduction
+        :return: Minimum adjusted area of a polygon to reduce
+        :rtype: Real
+        """
 
-        min_adj_area = .75 * math.pi * (diameter_tol / 2.) ** 2
+        min_adj_area = 0.75 * math.pi * (diameter_tol / 2.0) ** 2
 
         return min_adj_area
 
@@ -740,25 +813,35 @@ class Bend:
     def calculate_adj_area(area, perimeter):
         """Static method to calculate the adjusted area.
 
-        The adjusted area is used to determine if a bend must be reduce.
+         The adjusted area is used to determine if a bend must be reduce.
 
-       :param: real area: area of a polygon.
-       :param: real perimeter: perimeter of a polygon.
-       :return: Adjusted area of a polygon
-       :rtype: Real
-       """
+        :param: real area: area of a polygon.
+        :param: real perimeter: perimeter of a polygon.
+        :return: Adjusted area of a polygon
+        :rtype: Real
+        """
 
         try:
-            compactness_index = 4 * area * math.pi / perimeter ** 2
-            adj_area = area * (.75 / compactness_index)
+            compactness_index = 4 * area * math.pi / perimeter**2
+            adj_area = area * (0.75 / compactness_index)
         except ZeroDivisionError:
             # Catch division by zero
             adj_area = Epsilon.ZERO_RELATIVE
 
         return adj_area
 
-    __slots__ = ('i', 'j', 'area', 'perimeter', 'adj_area', 'to_reduce', '_qgs_geom_new_subline',
-                 '_qgs_geom_old_subline', '_qgs_points', 'qgs_geom_bend')
+    __slots__ = (
+        "i",
+        "j",
+        "area",
+        "perimeter",
+        "adj_area",
+        "to_reduce",
+        "_qgs_geom_new_subline",
+        "_qgs_geom_old_subline",
+        "_qgs_points",
+        "qgs_geom_bend",
+    )
 
     def __init__(self, i, j, qgs_points):
         """Constructor that initialize a Bend object.
@@ -775,7 +858,9 @@ class Bend:
         self._qgs_points = qgs_points
         self._qgs_geom_new_subline = None
         self._qgs_geom_old_subline = None
-        self.qgs_geom_bend = QgsGeometry(QgsPolygon(QgsLineString(qgs_points)))  # QgsPolygon will close the polygon
+        self.qgs_geom_bend = QgsGeometry(
+            QgsPolygon(QgsLineString(qgs_points))
+        )  # QgsPolygon will close the polygon
         self.area = self.qgs_geom_bend.area()
         self.perimeter = self.qgs_geom_bend.length()
         self.adj_area = Bend.calculate_adj_area(self.area, self.perimeter)
@@ -785,7 +870,9 @@ class Bend:
     def qgs_geom_new_subline(self):
         """Late attribute evaluation as this attribute is costly to evaluate"""
         if self._qgs_geom_new_subline is None:
-            self._qgs_geom_new_subline = QgsGeometry(QgsLineString(self._qgs_points[0], self._qgs_points[-1]))
+            self._qgs_geom_new_subline = QgsGeometry(
+                QgsLineString(self._qgs_points[0], self._qgs_points[-1])
+            )
         return self._qgs_geom_new_subline
 
     @property
@@ -813,12 +900,16 @@ class GeoSimUtil:
 
         constraints_valid = True
         if qgs_geom_new_subline.length() > Epsilon.ZERO_RELATIVE:
-            geom_engine_subline = QgsGeometry.createGeometryEngine(qgs_geom_new_subline.constGet().clone())
+            geom_engine_subline = QgsGeometry.createGeometryEngine(
+                qgs_geom_new_subline.constGet().clone()
+            )
             for qgs_geom_potential in qgs_geoms_with_itself:
-                de_9im_pattern = geom_engine_subline.relate(qgs_geom_potential.constGet().clone())
+                de_9im_pattern = geom_engine_subline.relate(
+                    qgs_geom_potential.constGet().clone()
+                )
                 # de_9im_pattern[0] == '0' means that their interiors intersect (crosses)
                 # de_9im_pattern[1] == '0' means that one extremity is touching the interior of the other (touches)
-                if de_9im_pattern[0] == '0' or de_9im_pattern[1] == '0':
+                if de_9im_pattern[0] == "0" or de_9im_pattern[1] == "0":
                     constraints_valid = False
                     break
         else:
@@ -841,11 +932,15 @@ class GeoSimUtil:
 
         constraints_valid = True
         if len(qgs_geoms_with_others) >= 1:
-            geom_engine_subline = QgsGeometry.createGeometryEngine(qgs_geom_new_subline.constGet().clone())
+            geom_engine_subline = QgsGeometry.createGeometryEngine(
+                qgs_geom_new_subline.constGet().clone()
+            )
             for qgs_geom_potential in qgs_geoms_with_others:
-                de_9im_pattern = geom_engine_subline.relate(qgs_geom_potential.constGet().clone())
+                de_9im_pattern = geom_engine_subline.relate(
+                    qgs_geom_potential.constGet().clone()
+                )
                 # de_9im_pattern[0] == '0' means that their interiors intersect (crosses)
-                if de_9im_pattern[0] == '0':
+                if de_9im_pattern[0] == "0":
                     constraints_valid = False
                     break
 
