@@ -16,8 +16,12 @@ from qgis.core import (
     QgsWkbTypes,
 )
 
-from .base_algorithm import GeoSimBaseAlgorithm
-from .core.chordal_axis import ChordalAxis, GenUtil, SpatialContainer, _TriangleSc
+try:
+    from .base_algorithm import GeoSimBaseAlgorithm
+    from .core.chordal_axis import ChordalAxis, GenUtil, SpatialContainer, _TriangleSc
+except ImportError:
+    from base_algorithm import GeoSimBaseAlgorithm
+    from core.chordal_axis import ChordalAxis, GenUtil, SpatialContainer, _TriangleSc
 
 
 def _tessellate_polygon(source, feedback):
@@ -81,6 +85,17 @@ def _tessellate_polygon(source, feedback):
             qgs_multi_triangles.append(tess_feature)
 
     return qgs_multi_triangles
+
+
+def tessellate_polygon(source, feedback):
+    """Backward-compatible public tessellation helper."""
+
+    return _tessellate_polygon(source, feedback)
+
+
+# Backward compatibility for older callers/tests using ChordalAxis.tessellate_polygon
+if not hasattr(ChordalAxis, "tessellate_polygon"):
+    ChordalAxis.tessellate_polygon = staticmethod(_tessellate_polygon)
 
 
 class ChordalAxisAlgorithm(GeoSimBaseAlgorithm):
