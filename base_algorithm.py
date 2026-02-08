@@ -60,8 +60,7 @@ class GeoSimBaseAlgorithm(QgsProcessingAlgorithm):
 
     @staticmethod
     def reset_geometry_counters():
-        from .geo_sim_util import GsFeature, RbGeom, SimGeom
+        from .geo_sim_util import GsFeature, RbGeom
 
         GsFeature._id_counter = 0
         RbGeom._id_counter = 0
-        SimGeom._id_counter = 0
