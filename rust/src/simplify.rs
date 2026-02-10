@@ -26,6 +26,13 @@ pub struct SimplifyOutput {
     pub stats: SimplifyStats,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct SimplifyProgress {
+    pub current_feature: usize,
+    pub total_features: usize,
+    pub current_pass: usize,
+}
+
 pub struct SimplifyEngine {
     tolerance: f64,
     validate_structure: bool,
@@ -54,6 +61,13 @@ impl SimplifyEngine {
     }
 
     pub fn run(mut self) -> Result<SimplifyOutput> {
+        self.run_with_progress(|_| {})
+    }
+
+    pub fn run_with_progress<F>(mut self, mut on_progress: F) -> Result<SimplifyOutput>
+    where
+        F: FnMut(SimplifyProgress),
+    {
         let in_count = self.gs_features.len();
         let mut total_deleted = 0usize;
         let mut pass = 0usize;
@@ -63,6 +77,12 @@ impl SimplifyEngine {
             let mut deleted_in_pass = 0usize;
 
             for i in 0..self.rb_geoms.len() {
+                on_progress(SimplifyProgress {
+                    current_feature: i + 1,
+                    total_features: self.rb_geoms.len(),
+                    current_pass: pass,
+                });
+
                 if !self.rb_geoms[i].is_simplest {
                     deleted_in_pass += self.process_line(i)?;
                 }

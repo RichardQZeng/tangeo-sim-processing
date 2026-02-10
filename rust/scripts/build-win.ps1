@@ -1,59 +1,47 @@
+param(
+    [ValidateSet("check", "build", "test")]
+    [string]$Command = "test",
+
+    [switch]$Clean,
+
+    [switch]$Release,
+
+    [switch]$DebugOnly
+)
+
 $ErrorActionPreference = 'Stop'
 
-if (-not $env:CONDA_PREFIX) {
-    throw "CONDA_PREFIX is not set. Run 'conda activate data' first."
-}
-
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
 $manifest = Join-Path $repoRoot "rust\Cargo.toml"
-$lib = Join-Path $env:CONDA_PREFIX "Library\lib"
-$include = Join-Path $env:CONDA_PREFIX "Library\include"
-$gdalHome = Join-Path $env:CONDA_PREFIX "Library"
+$envScript = Join-Path $scriptDir "env-win.ps1"
 
 if (-not (Test-Path $manifest)) {
     throw "Cargo.toml not found at $manifest"
 }
 
-if (-not (Test-Path (Join-Path $lib "gdal.lib"))) {
-    throw "Missing gdal.lib in $lib"
+if (-not (Test-Path $envScript)) {
+    throw "env-win.ps1 not found at $envScript"
 }
 
-if (-not (Test-Path (Join-Path $lib "geos_c.lib"))) {
-    throw "Missing geos_c.lib in $lib"
-}
-
-# Clear problematic overrides if present
-Remove-Item Env:GDAL_DYNAMIC -ErrorAction SilentlyContinue
-Remove-Item Env:GDAL_STATIC -ErrorAction SilentlyContinue
-Remove-Item Env:GDAL_NO_PKG_CONFIG -ErrorAction SilentlyContinue
-
-# GDAL / GEOS setup
-$env:GDAL_HOME = $gdalHome
-$env:GDAL_LIB_DIR = $lib
-$env:GDAL_INCLUDE_DIR = $include
-
-# Do NOT set GDAL_NO_PKG_CONFIG for gdal-sys v0.10.0.
-# On Windows/MSVC this can still cause gdal-sys to invoke pkg-config for
-# metadata/version probing, and if GDAL_NO_PKG_CONFIG=1 it aborts the build.
-
-$env:GEOS_LIB_DIR = $lib
-$env:GEOS_INCLUDE_DIR = $include
-$env:GEOS_NO_PKG_CONFIG = "1"
-$env:GEOS_VERSION = "3.13.1"
-
-$env:PATH = "$(Join-Path $env:CONDA_PREFIX 'Library\bin');$env:PATH"
-
-# Compatibility aliases for crates/build scripts
-if (-not (Test-Path (Join-Path $lib "gdal_i.lib"))) {
-    Copy-Item (Join-Path $lib "gdal.lib") (Join-Path $lib "gdal_i.lib")
-}
-
-if (-not (Test-Path (Join-Path $lib "gdal.dll.lib"))) {
-    Copy-Item (Join-Path $lib "gdal.lib") (Join-Path $lib "gdal.dll.lib")
-}
+. $envScript
 
 Write-Host "Using CONDA_PREFIX: $env:CONDA_PREFIX"
-Write-Host "Running cargo clean + cargo test..."
 
-cargo clean --manifest-path $manifest
-cargo test --manifest-path $manifest
+if ($Clean) {
+    Write-Host "Running cargo clean..."
+    cargo clean --manifest-path $manifest
+}
+
+Write-Host "Running cargo $Command..."
+if ($Release) {
+    cargo $Command --manifest-path $manifest --release
+}
+elseif ($DebugOnly) {
+    cargo $Command --manifest-path $manifest
+}
+else {
+    Write-Host "Default mode: running both debug and release"
+    cargo $Command --manifest-path $manifest
+    cargo $Command --manifest-path $manifest --release
+}
