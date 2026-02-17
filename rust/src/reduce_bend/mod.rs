@@ -49,6 +49,13 @@ pub struct ReduceBendOutput {
     pub stats: ReduceBendStats,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ReduceBendProgress {
+    pub current_feature: usize,
+    pub total_features: usize,
+    pub current_pass: usize,
+}
+
 pub struct ReduceBendEngine {
     params: ReduceBendParams,
     eps: Epsilon,
@@ -101,7 +108,14 @@ impl ReduceBendEngine {
         })
     }
 
-    pub fn run(mut self) -> Result<ReduceBendOutput> {
+    pub fn run(self) -> Result<ReduceBendOutput> {
+        self.run_with_progress(|_| {})
+    }
+
+    pub fn run_with_progress<F>(mut self, mut on_progress: F) -> Result<ReduceBendOutput>
+    where
+        F: FnMut(ReduceBendProgress),
+    {
         let in_count = self.gs_features.len();
 
         let mut stats = ReduceBendStats {
@@ -120,8 +134,15 @@ impl ReduceBendEngine {
             stats.nbr_pass += 1;
             let mut nbr_bend_reduced = 0usize;
             let mut nbr_bend_detected = 0usize;
+            let total_features = self.rb_geoms.len();
 
             for idx in 0..self.rb_geoms.len() {
+                on_progress(ReduceBendProgress {
+                    current_feature: idx + 1,
+                    total_features,
+                    current_pass: stats.nbr_pass,
+                });
+
                 if self.rb_geoms[idx].is_simplest {
                     continue;
                 }

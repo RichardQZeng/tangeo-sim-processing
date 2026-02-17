@@ -6,7 +6,7 @@ The Rust implementation provides topology-aware simplification workflows for Geo
 
 ## Current scope
 
-- Core simplify engine implemented in `src/simplify.rs`
+- Core simplify engine implemented in `src/simplify/`
 - Reduce-bend engine implemented in `src/reduce_bend/`
 - Constraint validation in `src/constraints.rs`
 - GeoPackage I/O in `src/io.rs`
@@ -17,13 +17,13 @@ The Rust implementation provides topology-aware simplification workflows for Geo
 
 ```bash
 # Backward-compatible simplify mode
-dp_simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
+dp-simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
 
 # Explicit simplify subcommand
-dp_simplify simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
+dp-simplify simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
 
 # Reduce-bend subcommand
-dp_simplify reduce-bend --input input.gpkg --output output.gpkg --diameter 100.0 \
+dp-simplify reduce-bend --input input.gpkg --output output.gpkg --diameter 100.0 \
   [--layer LAYER_NAME] [--smooth-line] [--del-outer] [--del-inner] [--validate-structure]
 ```
 
@@ -59,9 +59,9 @@ Purpose:
   - default behavior runs both debug and release
 
 - For `build` and `test`, the script also runs CLI smoke checks for:
-  - `dp_simplify --help`
-  - `dp_simplify simplify --help`
-  - `dp_simplify reduce-bend --help`
+  - `dp-simplify --help`
+  - `dp-simplify simplify --help`
+  - `dp-simplify reduce-bend --help`
 
 Example:
 
