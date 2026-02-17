@@ -1,6 +1,8 @@
 use anyhow::{anyhow, Result};
 
-use crate::constraints::{validate_intersection, validate_sidedness, validate_simplicity};
+use crate::constraints::{
+    validate_intersection, validate_sidedness_from_coords, validate_simplicity,
+};
 use crate::epsilon::Epsilon;
 use crate::geometry::{Coord, FeatureRecord, GsFeature, RbGeom, SimpleGeometry};
 use crate::spatial_index::{bbox_for_coords, GsCollection};
@@ -60,7 +62,7 @@ impl SimplifyEngine {
         })
     }
 
-    pub fn run(mut self) -> Result<SimplifyOutput> {
+    pub fn run(self) -> Result<SimplifyOutput> {
         self.run_with_progress(|_| {})
     }
 
@@ -123,7 +125,10 @@ impl SimplifyEngine {
     }
 
     fn process_line(&mut self, rb_geom_idx: usize) -> Result<usize> {
-        let mut stack = init_process_line_stack(self.rb_geoms[rb_geom_idx].is_closed(), &self.rb_geoms[rb_geom_idx].coords);
+        let mut stack = init_process_line_stack(
+            self.rb_geoms[rb_geom_idx].is_closed(),
+            &self.rb_geoms[rb_geom_idx].coords,
+        );
 
         let mut deleted = 0usize;
         self.rb_geoms[rb_geom_idx].is_simplest = true;
@@ -138,7 +143,8 @@ impl SimplifyEngine {
                 continue;
             }
 
-            let (farthest_index, farthest_dist) = find_farthest_point(&coords_snapshot, first, last);
+            let (farthest_index, farthest_dist) =
+                find_farthest_point(&coords_snapshot, first, last);
 
             if farthest_dist <= self.tolerance {
                 if self.validate_constraints(rb_geom_idx, first, last)? {
@@ -147,7 +153,8 @@ impl SimplifyEngine {
                         .rb_geoms
                         .get_mut(rb_geom_idx)
                         .ok_or_else(|| anyhow!("invalid rb geom index"))?;
-                    self.collection.delete_vertex(rb_geom, first + 1, last - 1)?;
+                    self.collection
+                        .delete_vertex(rb_geom, first + 1, last - 1)?;
                 } else {
                     self.rb_geoms[rb_geom_idx].is_simplest = false;
                     let now = &self.rb_geoms[rb_geom_idx].coords;
@@ -183,13 +190,15 @@ impl SimplifyEngine {
             return Ok(false);
         }
 
-        let new_subline = SimpleGeometry::LineString(vec![sub_coords[0], *sub_coords.last().unwrap()]).to_geos()?;
+        let new_subline =
+            SimpleGeometry::LineString(vec![sub_coords[0], *sub_coords.last().unwrap()])
+                .to_geos()?;
         let old_subline = SimpleGeometry::LineString(sub_coords.clone()).to_geos()?;
         let bbox = bbox_for_coords(&sub_coords);
 
-        let (with_itself, with_others) = self
-            .collection
-            .get_segment_intersect(sim_geom.id, bbox, &old_subline)?;
+        let (with_itself, with_others) =
+            self.collection
+                .get_segment_intersect(sim_geom.id, bbox, &old_subline)?;
 
         if !validate_simplicity(&with_itself, &new_subline, self.eps.zero_relative)? {
             return Ok(false);
@@ -200,7 +209,7 @@ impl SimplifyEngine {
         }
 
         if !with_others.is_empty() {
-            return validate_sidedness(&with_others, &sub_coords);
+            return validate_sidedness_from_coords(&with_others, &sub_coords);
         }
 
         Ok(true)

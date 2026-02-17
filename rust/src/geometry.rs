@@ -186,7 +186,10 @@ impl GsFeature {
         }
     }
 
-    pub fn from_records(records: &[FeatureRecord], zero_relative: f64) -> Result<(Vec<Self>, Vec<RbGeom>)> {
+    pub fn from_records(
+        records: &[FeatureRecord],
+        zero_relative: f64,
+    ) -> Result<(Vec<Self>, Vec<RbGeom>)> {
         let mut features = Vec::new();
         let mut rb_geoms = Vec::new();
         let mut rb_id = 1usize;

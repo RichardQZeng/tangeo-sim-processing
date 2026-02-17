@@ -6,7 +6,9 @@ param(
 
     [switch]$Release,
 
-    [switch]$DebugOnly
+    [switch]$DebugOnly,
+
+    [switch]$SkipCliSmoke
 )
 
 $ErrorActionPreference = 'Stop'
@@ -28,6 +30,29 @@ if (-not (Test-Path $envScript)) {
 
 Write-Host "Using CONDA_PREFIX: $env:CONDA_PREFIX"
 
+function Invoke-CliSmoke {
+    param(
+        [switch]$UseRelease
+    )
+
+    $mode = if ($UseRelease) { "release" } else { "debug" }
+    Write-Host "Running CLI smoke checks ($mode)..."
+
+    $args = @("run", "--manifest-path", $manifest)
+    if ($UseRelease) {
+        $args += "--release"
+    }
+
+    $helpArgs = $args + @("--", "--help")
+    & cargo @helpArgs | Out-Null
+
+    $simplifyArgs = $args + @("--", "simplify", "--help")
+    & cargo @simplifyArgs | Out-Null
+
+    $reduceBendArgs = $args + @("--", "reduce-bend", "--help")
+    & cargo @reduceBendArgs | Out-Null
+}
+
 if ($Clean) {
     Write-Host "Running cargo clean..."
     cargo clean --manifest-path $manifest
@@ -44,4 +69,17 @@ else {
     Write-Host "Default mode: running both debug and release"
     cargo $Command --manifest-path $manifest
     cargo $Command --manifest-path $manifest --release
+}
+
+if (-not $SkipCliSmoke -and ($Command -eq "build" -or $Command -eq "test")) {
+    if ($Release) {
+        Invoke-CliSmoke -UseRelease
+    }
+    elseif ($DebugOnly) {
+        Invoke-CliSmoke
+    }
+    else {
+        Invoke-CliSmoke
+        Invoke-CliSmoke -UseRelease
+    }
 }

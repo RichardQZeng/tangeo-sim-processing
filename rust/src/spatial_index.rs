@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use geos::{Geom, Geometry};
-use rstar::{AABB, PointDistance, RTree, RTreeObject};
+use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 use crate::geometry::{Coord, GeomType, RbGeom, SimpleGeometry};
 
@@ -24,7 +24,9 @@ impl SegmentGeometry {
 
     pub fn bbox(&self, grow: f64) -> AABB<[f64; 2]> {
         match self {
-            Self::Point(p) => AABB::from_corners([p.x - grow, p.y - grow], [p.x + grow, p.y + grow]),
+            Self::Point(p) => {
+                AABB::from_corners([p.x - grow, p.y - grow], [p.x + grow, p.y + grow])
+            }
             Self::Segment(a, b) => {
                 let min_x = a.x.min(b.x) - grow;
                 let min_y = a.y.min(b.y) - grow;
@@ -103,7 +105,10 @@ impl GsCollection {
         self.next_segment_id += 1;
 
         let envelope = geom.bbox(0.0);
-        let record = SegmentRecord { owner_geom_id, geom };
+        let record = SegmentRecord {
+            owner_geom_id,
+            geom,
+        };
         if self.records.len() <= segment_id {
             self.records.resize_with(segment_id + 1, || None);
         }
@@ -123,15 +128,25 @@ impl GsCollection {
     ) -> Result<(Vec<SegmentGeometry>, Vec<SegmentGeometry>)> {
         let grow = self.zero_relative * 100.0;
         let envelope = AABB::from_corners(
-            [subline_bbox.lower()[0] - grow, subline_bbox.lower()[1] - grow],
-            [subline_bbox.upper()[0] + grow, subline_bbox.upper()[1] + grow],
+            [
+                subline_bbox.lower()[0] - grow,
+                subline_bbox.lower()[1] - grow,
+            ],
+            [
+                subline_bbox.upper()[0] + grow,
+                subline_bbox.upper()[1] + grow,
+            ],
         );
 
         let mut with_itself = Vec::new();
         let mut with_others = Vec::new();
 
         for candidate in self.rtree.locate_in_envelope_intersecting(&envelope) {
-            let Some(record) = self.records.get(candidate.segment_id).and_then(|r| r.as_ref()) else {
+            let Some(record) = self
+                .records
+                .get(candidate.segment_id)
+                .and_then(|r| r.as_ref())
+            else {
                 continue;
             };
 
@@ -153,11 +168,16 @@ impl GsCollection {
         let mid_x = (p0.x + p1.x) * 0.5;
         let mid_y = (p0.y + p1.y) * 0.5;
         let grow = self.zero_relative * 100.0;
-        let envelope = AABB::from_corners([mid_x - grow, mid_y - grow], [mid_x + grow, mid_y + grow]);
+        let envelope =
+            AABB::from_corners([mid_x - grow, mid_y - grow], [mid_x + grow, mid_y + grow]);
 
         let mut found_entry: Option<SegmentEntry> = None;
         for candidate in self.rtree.locate_in_envelope_intersecting(&envelope) {
-            let Some(record) = self.records.get(candidate.segment_id).and_then(|r| r.as_ref()) else {
+            let Some(record) = self
+                .records
+                .get(candidate.segment_id)
+                .and_then(|r| r.as_ref())
+            else {
                 continue;
             };
             if record.owner_geom_id != owner_geom_id {
@@ -180,7 +200,12 @@ impl GsCollection {
         Ok(())
     }
 
-    fn _delete_vertex(&mut self, rb_geom: &mut RbGeom, v_id_start: usize, v_id_end: usize) -> Result<()> {
+    fn _delete_vertex(
+        &mut self,
+        rb_geom: &mut RbGeom,
+        v_id_start: usize,
+        v_id_end: usize,
+    ) -> Result<()> {
         let is_closed = rb_geom.is_closed();
         let mut ids_to_delete: Vec<usize> = (v_id_start..=v_id_end).collect();
         if v_id_start == 0 && is_closed {
@@ -214,7 +239,12 @@ impl GsCollection {
         Ok(())
     }
 
-    pub fn delete_vertex(&mut self, rb_geom: &mut RbGeom, mut v_id_start: usize, mut v_id_end: usize) -> Result<()> {
+    pub fn delete_vertex(
+        &mut self,
+        rb_geom: &mut RbGeom,
+        mut v_id_start: usize,
+        mut v_id_end: usize,
+    ) -> Result<()> {
         let num_points = rb_geom.coords.len();
         if v_id_start == num_points - 1 {
             v_id_start = 0;
@@ -235,6 +265,76 @@ impl GsCollection {
         }
     }
 
+    pub fn add_vertex(
+        &mut self,
+        rb_geom: &mut RbGeom,
+        bend_i: usize,
+        bend_j: usize,
+        new_subline_coords: &[Coord],
+    ) -> Result<()> {
+        if bend_j != bend_i + 1 {
+            return Err(anyhow!("invalid bend indexes: bend_j must be bend_i + 1"));
+        }
+
+        if bend_i >= rb_geom.coords.len() || bend_j >= rb_geom.coords.len() {
+            return Err(anyhow!(
+                "invalid bend indexes: endpoint index out of bounds"
+            ));
+        }
+
+        if new_subline_coords.len() < 2 {
+            return Err(anyhow!("new subline must contain at least 2 coordinates"));
+        }
+
+        if !coords_equal_eps(
+            new_subline_coords[0],
+            rb_geom.coords[bend_i],
+            self.zero_relative,
+        ) {
+            return Err(anyhow!(
+                "new subline start point does not match bend_i endpoint"
+            ));
+        }
+
+        if !coords_equal_eps(
+            new_subline_coords[new_subline_coords.len() - 1],
+            rb_geom.coords[bend_j],
+            self.zero_relative,
+        ) {
+            return Err(anyhow!(
+                "new subline end point does not match bend_j endpoint"
+            ));
+        }
+
+        self.delete_segment(rb_geom.id, rb_geom.coords[bend_i], rb_geom.coords[bend_j])?;
+
+        if new_subline_coords.len() > 2 {
+            for p in new_subline_coords[1..new_subline_coords.len() - 1]
+                .iter()
+                .rev()
+            {
+                rb_geom.coords.insert(bend_j, *p);
+            }
+        }
+
+        for pair in new_subline_coords.windows(2) {
+            self.insert_record(rb_geom.id, SegmentGeometry::Segment(pair[0], pair[1]));
+        }
+
+        if rb_geom.is_closed()
+            && rb_geom.coords.len() >= 2
+            && !coords_equal_eps(
+                rb_geom.coords[0],
+                rb_geom.coords[rb_geom.coords.len() - 1],
+                self.zero_relative,
+            )
+        {
+            return Err(anyhow!("closed ring invariant broken after add_vertex"));
+        }
+
+        Ok(())
+    }
+
     pub fn validate_integrity(&self, rb_geoms: &[RbGeom]) -> Result<bool> {
         for rb_geom in rb_geoms {
             if rb_geom.original_type == GeomType::Point {
@@ -245,7 +345,11 @@ impl GsCollection {
                 let bbox = target.bbox(self.zero_relative * 100.0);
                 let mut found = false;
                 for candidate in self.rtree.locate_in_envelope_intersecting(&bbox) {
-                    let Some(record) = self.records.get(candidate.segment_id).and_then(|r| r.as_ref()) else {
+                    let Some(record) = self
+                        .records
+                        .get(candidate.segment_id)
+                        .and_then(|r| r.as_ref())
+                    else {
                         continue;
                     };
                     if record.owner_geom_id == rb_geom.id
@@ -272,8 +376,14 @@ fn segments_equal(a: &SegmentGeometry, b: &SegmentGeometry, eps: f64) -> Result<
         return Ok(true);
     }
 
-    let d = ga.hausdorff_distance(&gb).map_err(|e| anyhow!(e.to_string()))?;
+    let d = ga
+        .hausdorff_distance(&gb)
+        .map_err(|e| anyhow!(e.to_string()))?;
     Ok(d <= eps)
+}
+
+fn coords_equal_eps(a: Coord, b: Coord, eps: f64) -> bool {
+    (a.x - b.x).abs() <= eps && (a.y - b.y).abs() <= eps
 }
 
 pub fn bbox_for_coords(coords: &[Coord]) -> AABB<[f64; 2]> {
@@ -294,4 +404,99 @@ pub fn bbox_for_coords(coords: &[Coord]) -> AABB<[f64; 2]> {
     }
 
     AABB::from_corners([min_x, min_y], [max_x, max_y])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::GsCollection;
+    use crate::geometry::{Coord, GeomType, RbGeom};
+
+    fn c(x: f64, y: f64) -> Coord {
+        Coord { x, y }
+    }
+
+    fn open_rb_geom(id: usize, coords: Vec<Coord>) -> RbGeom {
+        RbGeom {
+            id,
+            original_type: GeomType::LineString,
+            is_simplest: false,
+            need_pivot: false,
+            coords,
+        }
+    }
+
+    fn closed_ring_rb_geom(id: usize, coords: Vec<Coord>) -> RbGeom {
+        RbGeom {
+            id,
+            original_type: GeomType::Polygon,
+            is_simplest: false,
+            need_pivot: false,
+            coords,
+        }
+    }
+
+    #[test]
+    fn add_vertex_open_line_happy_path() {
+        let mut rb = open_rb_geom(1, vec![c(0.0, 0.0), c(3.0, 0.0)]);
+        let mut col = GsCollection::new(1e-9);
+        col.add_features(&[rb.clone()]);
+
+        let new_subline = vec![c(0.0, 0.0), c(1.0, 1.0), c(2.0, 1.0), c(3.0, 0.0)];
+        col.add_vertex(&mut rb, 0, 1, &new_subline)
+            .expect("add vertex should succeed");
+
+        assert_eq!(rb.coords, new_subline);
+        assert!(col
+            .validate_integrity(&[rb.clone()])
+            .expect("integrity validation should run"));
+    }
+
+    #[test]
+    fn add_vertex_rejects_non_adjacent_indexes() {
+        let mut rb = open_rb_geom(1, vec![c(0.0, 0.0), c(1.0, 0.0), c(2.0, 0.0)]);
+        let mut col = GsCollection::new(1e-9);
+        col.add_features(&[rb.clone()]);
+
+        let err = col
+            .add_vertex(&mut rb, 0, 2, &[c(0.0, 0.0), c(2.0, 0.0)])
+            .expect_err("non-adjacent indexes must fail");
+        assert!(err.to_string().contains("bend_j must be bend_i + 1"));
+    }
+
+    #[test]
+    fn add_vertex_rejects_endpoint_mismatch() {
+        let mut rb = open_rb_geom(1, vec![c(0.0, 0.0), c(3.0, 0.0)]);
+        let mut col = GsCollection::new(1e-9);
+        col.add_features(&[rb.clone()]);
+
+        let err = col
+            .add_vertex(&mut rb, 0, 1, &[c(0.5, 0.0), c(3.0, 0.0)])
+            .expect_err("endpoint mismatch must fail");
+        assert!(err.to_string().contains("start point"));
+    }
+
+    #[test]
+    fn add_vertex_preserves_closed_ring_invariant() {
+        let mut rb = closed_ring_rb_geom(
+            2,
+            vec![
+                c(0.0, 0.0),
+                c(4.0, 0.0),
+                c(4.0, 4.0),
+                c(0.0, 4.0),
+                c(0.0, 0.0),
+            ],
+        );
+        let mut col = GsCollection::new(1e-9);
+        col.add_features(&[rb.clone()]);
+
+        let subline = vec![c(4.0, 0.0), c(5.0, 2.0), c(4.0, 4.0)];
+        col.add_vertex(&mut rb, 1, 2, &subline)
+            .expect("closed-ring insertion should succeed");
+
+        assert_eq!(rb.coords.first(), rb.coords.last());
+        assert!(col
+            .validate_integrity(&[rb.clone()])
+            .expect("integrity validation should run"));
+    }
 }

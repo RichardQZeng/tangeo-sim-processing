@@ -1,7 +1,10 @@
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
-use gdal::vector::{Defn, FieldValue as OgrFieldValue, Geometry, LayerAccess, LayerOptions, OGRFieldType, OGRwkbGeometryType};
+use gdal::vector::{
+    Defn, FieldValue as OgrFieldValue, Geometry, LayerAccess, LayerOptions, OGRFieldType,
+    OGRwkbGeometryType,
+};
 use gdal::{Dataset, DriverManager};
 
 use crate::geometry::{FeatureRecord, FieldValue, GeoJsonGeometry, SimpleGeometry};
@@ -22,7 +25,10 @@ pub struct LayerSchema {
     pub srs_wkt: Option<String>,
 }
 
-pub fn read_gpkg(path: &str, layer_name: Option<&str>) -> Result<(Vec<FeatureRecord>, LayerSchema)> {
+pub fn read_gpkg(
+    path: &str,
+    layer_name: Option<&str>,
+) -> Result<(Vec<FeatureRecord>, LayerSchema)> {
     let ds = Dataset::open(Path::new(path))?;
     let mut layer = if let Some(name) = layer_name {
         ds.layer_by_name(name)?
@@ -47,9 +53,7 @@ pub fn read_gpkg(path: &str, layer_name: Option<&str>) -> Result<(Vec<FeatureRec
         .map(|gf| gf.field_type())
         .unwrap_or(OGRwkbGeometryType::wkbUnknown);
 
-    let srs_wkt = layer
-        .spatial_ref()
-        .and_then(|s| s.to_wkt().ok());
+    let srs_wkt = layer.spatial_ref().and_then(|s| s.to_wkt().ok());
 
     let schema = LayerSchema {
         layer_name: layer.name(),

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use dp_simplify::geometry::SimpleGeometry;
 use dp_simplify::io::read_gpkg;
-use dp_simplify::{SimplifyEngine, SimplifyParams};
+use dp_simplify::{ReduceBendEngine, ReduceBendParams};
 use geos::Geom;
 use serde::Deserialize;
 
@@ -11,33 +11,26 @@ use serde::Deserialize;
 struct ManifestCase {
     id: u32,
     title: String,
-    tolerance: f64,
+    diameter: f64,
     input_file: String,
     expected_file: String,
+    #[serde(default)]
+    smooth_line: bool,
+    #[serde(default)]
+    del_outer: bool,
+    #[serde(default)]
+    del_inner: bool,
 }
 
 #[test]
-fn test_point_to_segment_distance_basic() {
-    use dp_simplify::geometry::Coord;
-    use dp_simplify::simplify::point_to_segment_dist;
-
-    let d = point_to_segment_dist(
-        Coord { x: 5.0, y: 2.0 },
-        Coord { x: 0.0, y: 0.0 },
-        Coord { x: 10.0, y: 0.0 },
-    );
-    assert!((d - 2.0).abs() < 1e-12);
-}
-
-#[test]
-fn test_manifest_cases_if_available() {
+fn test_reduce_bend_manifest_cases_if_available() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let data_dir = root.join("tests").join("data");
-    let manifest_path = data_dir.join("test_manifest.json");
+    let manifest_path = data_dir.join("test_manifest_reduce_bend.json");
 
     if !manifest_path.exists() {
         eprintln!(
-            "Skipping integration data tests: {} not found",
+            "Skipping reduce-bend integration data tests: {} not found",
             manifest_path.display()
         );
         return;
@@ -53,10 +46,13 @@ fn test_manifest_cases_if_available() {
         let (input_records, _schema) = read_gpkg(input_path.to_string_lossy().as_ref(), None)
             .unwrap_or_else(|e| panic!("case {} {} input read failed: {e}", case.id, case.title));
 
-        let engine = SimplifyEngine::new(
+        let engine = ReduceBendEngine::new(
             &input_records,
-            SimplifyParams {
-                tolerance: case.tolerance,
+            ReduceBendParams {
+                diameter_tol: case.diameter,
+                smooth_line: case.smooth_line,
+                flag_del_outer: case.del_outer,
+                flag_del_inner: case.del_inner,
                 validate_structure: false,
             },
         )
@@ -64,7 +60,7 @@ fn test_manifest_cases_if_available() {
 
         let output = engine
             .run()
-            .unwrap_or_else(|e| panic!("case {} {} simplify failed: {e}", case.id, case.title));
+            .unwrap_or_else(|e| panic!("case {} {} reduce-bend failed: {e}", case.id, case.title));
 
         let (expected_records, _) = read_gpkg(expected_path.to_string_lossy().as_ref(), None)
             .unwrap_or_else(|e| {

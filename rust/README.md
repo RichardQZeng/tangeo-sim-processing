@@ -1,21 +1,30 @@
-# Rust Simplify Rewrite
+# Rust Geometry Simplification Rewrite
 
-This directory contains the Rust rewrite of the **simplify** algorithm from the Python implementation (`core/simplify.py`).
+This directory contains the Rust rewrite of geometry simplification algorithms from the Python implementation (`core/simplify.py` and `core/reduce_bend.py`).
 
-The Rust implementation provides a **topology-aware Douglas-Peucker** simplification workflow for GeoPackage line layers. It is designed to keep simplification fast while preserving key topological constraints (simplicity, intersections, and sidedness checks).
+The Rust implementation provides topology-aware simplification workflows for GeoPackage layers while preserving key topological constraints (simplicity, intersections, and sidedness checks).
 
 ## Current scope
 
 - Core simplify engine implemented in `src/simplify.rs`
+- Reduce-bend engine implemented in `src/reduce_bend/`
 - Constraint validation in `src/constraints.rs`
 - GeoPackage I/O in `src/io.rs`
 - CLI entrypoint in `src/main.rs`
-- Integration tests in `tests/integration_tests.rs`
+- Integration tests in `tests/integration_tests.rs` and `tests/integration_tests_reduce_bend.rs`
 
 ## CLI usage
 
 ```bash
+# Backward-compatible simplify mode
 dp_simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
+
+# Explicit simplify subcommand
+dp_simplify simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
+
+# Reduce-bend subcommand
+dp_simplify reduce-bend --input input.gpkg --output output.gpkg --diameter 100.0 \
+  [--layer LAYER_NAME] [--smooth-line] [--del-outer] [--del-inner] [--validate-structure]
 ```
 
 ## Build scripts (`rust/scripts`)
@@ -46,7 +55,13 @@ Purpose:
   - `-Clean` to run `cargo clean` first
   - `-Release` to run release only
   - `-DebugOnly` to run debug only
+  - `-SkipCliSmoke` to skip CLI smoke checks
   - default behavior runs both debug and release
+
+- For `build` and `test`, the script also runs CLI smoke checks for:
+  - `dp_simplify --help`
+  - `dp_simplify simplify --help`
+  - `dp_simplify reduce-bend --help`
 
 Example:
 
