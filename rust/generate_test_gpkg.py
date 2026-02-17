@@ -9,9 +9,9 @@ Usage:
         python generate_test_gpkg.py
 
 Output:
-    tests/data/test_XX_input.gpkg   — input geometries
-    tests/data/test_XX_expected.gpkg — expected output geometries
-    tests/data/test_manifest.json    — metadata for all test cases
+    tests/simplify/test_XX_input.gpkg   — input geometries
+    tests/simplify/test_XX_expected.gpkg — expected output geometries
+    tests/simplify/test_manifest.json    — metadata for all test cases
 """
 
 import json
@@ -197,7 +197,11 @@ TEST_CASES = [
         "id": 9,
         "title": "Triangle polygon, no simplification",
         "inputs": [
-            {"type": "polygon", "outer": [(0, 0), (5, 5), (10, 0), (0, 0)], "inners": []}
+            {
+                "type": "polygon",
+                "outer": [(0, 0), (5, 5), (10, 0), (0, 0)],
+                "inners": [],
+            }
         ],
         "tolerance": 10,
     },
@@ -268,8 +272,15 @@ TEST_CASES = [
             {
                 "type": "line",
                 "coords": [
-                    (0, 0), (5, 0), (5, 2), (10, 2), (10, 0),
-                    (50, 0), (50, -5), (7, -5), (7, 1),
+                    (0, 0),
+                    (5, 0),
+                    (5, 2),
+                    (10, 2),
+                    (10, 0),
+                    (50, 0),
+                    (50, -5),
+                    (7, -5),
+                    (7, 1),
                 ],
             }
         ],
@@ -377,9 +388,7 @@ TEST_CASES = [
     {
         "id": 27,
         "title": "Duplicate points simplified",
-        "inputs": [
-            {"type": "line", "coords": [(0, 0), (2, 2), (2, 2), (4, 0)]}
-        ],
+        "inputs": [{"type": "line", "coords": [(0, 0), (2, 2), (2, 2), (4, 0)]}],
         "tolerance": 3,
     },
     {
@@ -407,7 +416,12 @@ TEST_CASES = [
             {
                 "type": "line",
                 "coords": [
-                    (40, 40), (40, 40), (40, 40), (40, 40), (40, 40), (40, 40),
+                    (40, 40),
+                    (40, 40),
+                    (40, 40),
+                    (40, 40),
+                    (40, 40),
+                    (40, 40),
                 ],
             },
         ],
@@ -429,7 +443,7 @@ def main():
     app = QgsApplication([], False)
     app.initQgis()
 
-    data_dir = os.path.join(os.path.dirname(__file__), "tests", "data")
+    data_dir = os.path.join(os.path.dirname(__file__), "tests", "simplify")
     os.makedirs(data_dir, exist_ok=True)
 
     manifest = []

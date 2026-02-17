@@ -74,4 +74,5 @@ conda activate data
 ## Notes
 
 - Migration status and parity checklist: see `MIGRATION_PLAN.md`
+- Reduce-bend test-data generation: `generate_test_reduce_bend_gpkg.py`
 - Windows build/setup details: see `BUILD_WINDOWS.md`

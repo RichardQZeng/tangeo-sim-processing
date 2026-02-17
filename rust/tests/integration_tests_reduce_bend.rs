@@ -25,7 +25,7 @@ struct ManifestCase {
 #[test]
 fn test_reduce_bend_manifest_cases_if_available() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let data_dir = root.join("tests").join("data");
+    let data_dir = root.join("tests").join("bend");
     let manifest_path = data_dir.join("test_manifest_reduce_bend.json");
 
     if !manifest_path.exists() {

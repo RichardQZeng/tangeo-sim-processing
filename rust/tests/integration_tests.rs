@@ -32,7 +32,7 @@ fn test_point_to_segment_distance_basic() {
 #[test]
 fn test_manifest_cases_if_available() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let data_dir = root.join("tests").join("data");
+    let data_dir = root.join("tests").join("simplify");
     let manifest_path = data_dir.join("test_manifest.json");
 
     if !manifest_path.exists() {
