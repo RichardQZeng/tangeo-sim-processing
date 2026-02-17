@@ -1,0 +1,263 @@
+[
+  {
+    "id": 1,
+    "title": "Empty file",
+    "tolerance": 2,
+    "input_file": "test_01_input.gpkg",
+    "expected_file": "test_01_expected.gpkg",
+    "num_input_features": 0,
+    "num_output_features": 0
+  },
+  {
+    "id": 2,
+    "title": "Open line with 2 vertices",
+    "tolerance": 5,
+    "input_file": "test_02_input.gpkg",
+    "expected_file": "test_02_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 3,
+    "title": "Open line with 3 vertices",
+    "tolerance": 5,
+    "input_file": "test_03_input.gpkg",
+    "expected_file": "test_03_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 4,
+    "title": "Open line with 4 vertices, farthest=2",
+    "tolerance": 5,
+    "input_file": "test_04_input.gpkg",
+    "expected_file": "test_04_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 5,
+    "title": "Open line with 4 vertices, farthest=1",
+    "tolerance": 5,
+    "input_file": "test_05_input.gpkg",
+    "expected_file": "test_05_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 6,
+    "title": "Open line with 5 vertices, farthest in middle",
+    "tolerance": 5,
+    "input_file": "test_06_input.gpkg",
+    "expected_file": "test_06_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 7,
+    "title": "Open line with 5 vertices, partial simplify",
+    "tolerance": 3.5,
+    "input_file": "test_07_input.gpkg",
+    "expected_file": "test_07_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 8,
+    "title": "Open line with 5 vertices, below tolerance",
+    "tolerance": 0.1,
+    "input_file": "test_08_input.gpkg",
+    "expected_file": "test_08_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 9,
+    "title": "Triangle polygon, no simplification",
+    "tolerance": 10,
+    "input_file": "test_09_input.gpkg",
+    "expected_file": "test_09_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 10,
+    "title": "Square polygon",
+    "tolerance": 10,
+    "input_file": "test_10_input.gpkg",
+    "expected_file": "test_10_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 11,
+    "title": "Pentagon simplified to square",
+    "tolerance": 10,
+    "input_file": "test_11_input.gpkg",
+    "expected_file": "test_11_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 12,
+    "title": "Pentagon simplified to square (bottom bump)",
+    "tolerance": 10,
+    "input_file": "test_12_input.gpkg",
+    "expected_file": "test_12_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 13,
+    "title": "Collinear point removal",
+    "tolerance": 2,
+    "input_file": "test_13_input.gpkg",
+    "expected_file": "test_13_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 14,
+    "title": "Small bump removal on polygon",
+    "tolerance": 2,
+    "input_file": "test_14_input.gpkg",
+    "expected_file": "test_14_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 15,
+    "title": "Self-intersecting open line",
+    "tolerance": 3,
+    "input_file": "test_15_input.gpkg",
+    "expected_file": "test_15_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 16,
+    "title": "Cross-feature intersection blocks simplification",
+    "tolerance": 3,
+    "input_file": "test_16_input.gpkg",
+    "expected_file": "test_16_expected.gpkg",
+    "num_input_features": 2,
+    "num_output_features": 2
+  },
+  {
+    "id": 17,
+    "title": "Two parallel lines simplified",
+    "tolerance": 3,
+    "input_file": "test_17_input.gpkg",
+    "expected_file": "test_17_expected.gpkg",
+    "num_input_features": 2,
+    "num_output_features": 2
+  },
+  {
+    "id": 18,
+    "title": "Two parallel lines simplified (reversed order)",
+    "tolerance": 3,
+    "input_file": "test_18_input.gpkg",
+    "expected_file": "test_18_expected.gpkg",
+    "num_input_features": 2,
+    "num_output_features": 2
+  },
+  {
+    "id": 19,
+    "title": "Partial simplify with blocker line",
+    "tolerance": 3,
+    "input_file": "test_19_input.gpkg",
+    "expected_file": "test_19_expected.gpkg",
+    "num_input_features": 2,
+    "num_output_features": 2
+  },
+  {
+    "id": 20,
+    "title": "Partial simplify with blocker line (2)",
+    "tolerance": 3,
+    "input_file": "test_20_input.gpkg",
+    "expected_file": "test_20_expected.gpkg",
+    "num_input_features": 2,
+    "num_output_features": 2
+  },
+  {
+    "id": 21,
+    "title": "Sidedness constraint prevents simplification",
+    "tolerance": 3,
+    "input_file": "test_21_input.gpkg",
+    "expected_file": "test_21_expected.gpkg",
+    "num_input_features": 2,
+    "num_output_features": 2
+  },
+  {
+    "id": 22,
+    "title": "Sidedness, partial simplification",
+    "tolerance": 3,
+    "input_file": "test_22_input.gpkg",
+    "expected_file": "test_22_expected.gpkg",
+    "num_input_features": 2,
+    "num_output_features": 2
+  },
+  {
+    "id": 23,
+    "title": "Two disjoint lines simplified",
+    "tolerance": 3,
+    "input_file": "test_23_input.gpkg",
+    "expected_file": "test_23_expected.gpkg",
+    "num_input_features": 2,
+    "num_output_features": 2
+  },
+  {
+    "id": 24,
+    "title": "Two touching lines simplified",
+    "tolerance": 3,
+    "input_file": "test_24_input.gpkg",
+    "expected_file": "test_24_expected.gpkg",
+    "num_input_features": 2,
+    "num_output_features": 2
+  },
+  {
+    "id": 25,
+    "title": "Endpoint touching middle of other line",
+    "tolerance": 3,
+    "input_file": "test_25_input.gpkg",
+    "expected_file": "test_25_expected.gpkg",
+    "num_input_features": 2,
+    "num_output_features": 2
+  },
+  {
+    "id": 26,
+    "title": "Superimposed middle sections",
+    "tolerance": 3,
+    "input_file": "test_26_input.gpkg",
+    "expected_file": "test_26_expected.gpkg",
+    "num_input_features": 2,
+    "num_output_features": 2
+  },
+  {
+    "id": 27,
+    "title": "Duplicate points simplified",
+    "tolerance": 3,
+    "input_file": "test_27_input.gpkg",
+    "expected_file": "test_27_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 28,
+    "title": "Multiple duplicate points simplified",
+    "tolerance": 3,
+    "input_file": "test_28_input.gpkg",
+    "expected_file": "test_28_expected.gpkg",
+    "num_input_features": 1,
+    "num_output_features": 1
+  },
+  {
+    "id": 29,
+    "title": "Degenerate lines (all identical points)",
+    "tolerance": 15,
+    "input_file": "test_29_input.gpkg",
+    "expected_file": "test_29_expected.gpkg",
+    "num_input_features": 5,
+    "num_output_features": 5
+  }
+]
