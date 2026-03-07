@@ -8,8 +8,10 @@ use dp_simplify::{
 };
 
 #[derive(Debug, Parser)]
-#[command(name = "dp-simplify")]
-#[command(about = "Topology-aware Douglas-Peucker simplification for GeoPackage layers")]
+#[command(name = "geo-simplify")]
+#[command(
+    about = "Topology-aware Douglas-Peucker simplification and reduce bend operations for GeoPackage layers"
+)]
 struct Cli {
     #[arg(long)]
     input: Option<String>,

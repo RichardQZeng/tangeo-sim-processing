@@ -82,7 +82,9 @@ impl ReduceBendEngine {
 
         let (gs_features, mut rb_geoms) = GsFeature::from_records(&filtered, eps.zero_relative)?;
         for rb in &mut rb_geoms {
-            remove_duplicate_nodes(rb, eps.zero_relative);
+            if !rb.is_simplest {
+                remove_duplicate_nodes(rb, eps.zero_relative);
+            }
         }
 
         let mut collection = GsCollection::new(eps.zero_relative);
@@ -192,6 +194,7 @@ impl ReduceBendEngine {
             .iter()
             .map(|f| f.rebuild_record(&self.rb_geoms))
             .collect::<Result<Vec<_>>>()?;
+
         out_features.sort_by_key(|f| (f.stable_id, f.fid.unwrap_or(u64::MAX)));
 
         if self.params.validate_structure {

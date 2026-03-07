@@ -77,6 +77,19 @@ impl SimpleGeometry {
     }
 
     pub fn to_geos(&self) -> Result<Geometry> {
+        match self {
+            SimpleGeometry::LineString(coords) => {
+                if coords.len() < 2 {
+                    return Err(anyhow!("LineString must have at least 2 points"));
+                }
+            }
+            SimpleGeometry::Polygon { outer, .. } => {
+                if outer.len() < 4 {
+                    return Err(anyhow!("Polygon outer ring must have at least 4 points (closed ring)"));
+                }
+            }
+            SimpleGeometry::Point(_) => {}
+        }
         Geometry::new_from_wkt(&self.to_wkt()).map_err(|e| anyhow!(e.to_string()))
     }
 }
