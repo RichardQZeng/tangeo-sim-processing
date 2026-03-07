@@ -3,3 +3,4 @@
 .git
 /rust/target
 /rust/tests/data
+/rust/agents

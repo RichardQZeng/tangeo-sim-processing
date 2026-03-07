@@ -17,13 +17,13 @@ The Rust implementation provides topology-aware simplification workflows for Geo
 
 ```bash
 # Backward-compatible simplify mode
-dp-simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
+geo-simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
 
 # Explicit simplify subcommand
-dp-simplify simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
+geo-simplify simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
 
 # Reduce-bend subcommand
-dp-simplify reduce-bend --input input.gpkg --output output.gpkg --diameter 100.0 \
+geo-simplify reduce-bend --input input.gpkg --output output.gpkg --diameter 100.0 \
   [--layer LAYER_NAME] [--smooth-line] [--del-outer] [--del-inner] [--validate-structure]
 ```
 
@@ -56,12 +56,12 @@ Purpose:
   - `-Release` to run release only
   - `-DebugOnly` to run debug only
   - `-SkipCliSmoke` to skip CLI smoke checks
-  - default behavior runs both debug and release
+  - default behavior runs release only
 
 - For `build` and `test`, the script also runs CLI smoke checks for:
-  - `dp-simplify --help`
-  - `dp-simplify simplify --help`
-  - `dp-simplify reduce-bend --help`
+  - `geo-simplify --help`
+  - `geo-simplify simplify --help`
+  - `geo-simplify reduce-bend --help`
 
 Example:
 
@@ -73,6 +73,5 @@ conda activate data
 
 ## Notes
 
-- Migration status and parity checklist: see `MIGRATION_PLAN.md`
+- Reduce-bend preserves degenerate inputs (for example, zero-length lines) as simplest geometries and skips further bend reduction on them.
 - Reduce-bend test-data generation: `generate_test_reduce_bend_gpkg.py`
-- Windows build/setup details: see `BUILD_WINDOWS.md`
