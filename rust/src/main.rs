@@ -23,7 +23,10 @@ struct Cli {
     tolerance: Option<f64>,
 
     #[arg(long)]
-    layer: Option<String>,
+    in_layer: Option<String>,
+
+    #[arg(long)]
+    out_layer: Option<String>,
 
     #[arg(long, default_value_t = false)]
     validate_structure: bool,
@@ -47,7 +50,9 @@ struct SimplifyArgs {
     #[arg(long)]
     tolerance: f64,
     #[arg(long)]
-    layer: Option<String>,
+    in_layer: Option<String>,
+    #[arg(long)]
+    out_layer: Option<String>,
     #[arg(long, default_value_t = false)]
     validate_structure: bool,
 }
@@ -61,7 +66,9 @@ struct ReduceBendArgs {
     #[arg(long)]
     diameter: f64,
     #[arg(long)]
-    layer: Option<String>,
+    in_layer: Option<String>,
+    #[arg(long)]
+    out_layer: Option<String>,
     #[arg(long, default_value_t = false)]
     smooth_line: bool,
     #[arg(long, default_value_t = false)]
@@ -93,7 +100,8 @@ fn main() -> Result<()> {
                 input,
                 output,
                 tolerance,
-                layer: cli.layer,
+                in_layer: cli.in_layer,
+                out_layer: cli.out_layer,
                 validate_structure: cli.validate_structure,
             })
         }
@@ -101,7 +109,7 @@ fn main() -> Result<()> {
 }
 
 fn run_simplify(args: SimplifyArgs) -> Result<()> {
-    let (records, schema) = read_gpkg(&args.input, args.layer.as_deref())?;
+    let (records, schema) = read_gpkg(&args.input, args.in_layer.as_deref())?;
 
     let engine = SimplifyEngine::new(
         &records,
@@ -149,7 +157,7 @@ fn run_simplify(args: SimplifyArgs) -> Result<()> {
         eprintln!();
     }
 
-    write_gpkg(&args.output, &out.features, &schema)?;
+    write_gpkg(&args.output, &out.features, &schema, args.out_layer.as_deref())?;
 
     println!(
         "Simplified: in_features={} out_features={} deleted_vertices={} passes={}",
@@ -167,7 +175,7 @@ fn run_simplify(args: SimplifyArgs) -> Result<()> {
 }
 
 fn run_reduce_bend(args: ReduceBendArgs) -> Result<()> {
-    let (records, schema) = read_gpkg(&args.input, args.layer.as_deref())?;
+    let (records, schema) = read_gpkg(&args.input, args.in_layer.as_deref())?;
     let engine = ReduceBendEngine::new(
         &records,
         ReduceBendParams {
@@ -217,7 +225,7 @@ fn run_reduce_bend(args: ReduceBendArgs) -> Result<()> {
         eprintln!();
     }
 
-    write_gpkg(&args.output, &out.features, &schema)?;
+    write_gpkg(&args.output, &out.features, &schema, args.out_layer.as_deref())?;
 
     println!(
         "Reduce-bend: in_features={} out_features={} reduced_bends={} detected_bends={} passes={} holes_deleted={} polygons_deleted={} smoothed_lines={}",

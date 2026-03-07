@@ -93,7 +93,12 @@ pub fn read_gpkg(
     Ok((records, schema))
 }
 
-pub fn write_gpkg(path: &str, records: &[FeatureRecord], schema: &LayerSchema) -> Result<()> {
+pub fn write_gpkg(
+    path: &str,
+    records: &[FeatureRecord],
+    schema: &LayerSchema,
+    out_layer_name: Option<&str>,
+) -> Result<()> {
     if Path::new(path).exists() {
         std::fs::remove_file(path)?;
     }
@@ -108,7 +113,7 @@ pub fn write_gpkg(path: &str, records: &[FeatureRecord], schema: &LayerSchema) -
     };
 
     let layer_options = LayerOptions {
-        name: &schema.layer_name,
+        name: out_layer_name.unwrap_or(&schema.layer_name),
         srs: srs.as_ref(),
         ty: schema.geom_type,
         options: None,

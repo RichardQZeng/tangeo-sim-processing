@@ -17,14 +17,14 @@ The Rust implementation provides topology-aware simplification workflows for Geo
 
 ```bash
 # Backward-compatible simplify mode
-geo-simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
+geo-simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--in-layer INPUT_LAYER] [--out-layer OUTPUT_LAYER] [--validate-structure]
 
 # Explicit simplify subcommand
-geo-simplify simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--layer LAYER_NAME] [--validate-structure]
+geo-simplify simplify --input input.gpkg --output output.gpkg --tolerance 5.0 [--in-layer INPUT_LAYER] [--out-layer OUTPUT_LAYER] [--validate-structure]
 
 # Reduce-bend subcommand
 geo-simplify reduce-bend --input input.gpkg --output output.gpkg --diameter 100.0 \
-  [--layer LAYER_NAME] [--smooth-line] [--del-outer] [--del-inner] [--validate-structure]
+  [--in-layer INPUT_LAYER] [--out-layer OUTPUT_LAYER] [--smooth-line] [--del-outer] [--del-inner] [--validate-structure]
 ```
 
 ## Build scripts (`rust/scripts`)
@@ -69,6 +69,20 @@ Example:
 cd d:\BERATools\tangeo-sim-processing\rust
 conda activate data
 .\scripts\build-win.ps1 -Command test -Clean
+```
+
+### Verification
+
+Run these commands to validate the CLI and tests locally:
+
+```powershell
+cd d:\BERATools\tangeo-sim-processing\rust
+conda activate data
+.\scripts\build-win.ps1 -Command check
+.\scripts\build-win.ps1 -Command test
+cargo run -- --help
+cargo run -- simplify --help
+cargo run -- reduce-bend --help
 ```
 
 ## Notes
