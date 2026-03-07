@@ -66,8 +66,7 @@ elseif ($DebugOnly) {
     cargo $Command --manifest-path $manifest
 }
 else {
-    Write-Host "Default mode: running both debug and release"
-    cargo $Command --manifest-path $manifest
+    Write-Host "Default mode: running release only"
     cargo $Command --manifest-path $manifest --release
 }
 
