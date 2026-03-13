@@ -53,6 +53,29 @@ function Invoke-CliSmoke {
     & cargo @reduceBendArgs | Out-Null
 }
 
+function Copy-WindowsArtifact {
+    param(
+        [switch]$UseRelease
+    )
+
+    $profile = if ($UseRelease) { "release" } else { "debug" }
+    $source = Join-Path $repoRoot "rust\target\$profile\geo-simplify.exe"
+    $distDir = Join-Path $repoRoot "rust\dist"
+    $destName = if ($UseRelease) { "geo-simplify-win-x64.exe" } else { "geo-simplify-win-x64-debug.exe" }
+    $destination = Join-Path $distDir $destName
+
+    if (-not (Test-Path $source)) {
+        throw "Built binary not found at $source"
+    }
+
+    if (-not (Test-Path $distDir)) {
+        New-Item -ItemType Directory -Path $distDir | Out-Null
+    }
+
+    Copy-Item -Path $source -Destination $destination -Force
+    Write-Host "Copied Windows x64 binary to: $destination"
+}
+
 if ($Clean) {
     Write-Host "Running cargo clean..."
     cargo clean --manifest-path $manifest
@@ -80,5 +103,17 @@ if (-not $SkipCliSmoke -and ($Command -eq "build" -or $Command -eq "test")) {
     else {
         Invoke-CliSmoke
         Invoke-CliSmoke -UseRelease
+    }
+}
+
+if ($Command -eq "build" -or $Command -eq "test") {
+    if ($Release) {
+        Copy-WindowsArtifact -UseRelease
+    }
+    elseif ($DebugOnly) {
+        Copy-WindowsArtifact
+    }
+    else {
+        Copy-WindowsArtifact -UseRelease
     }
 }

@@ -29,10 +29,12 @@ geo-simplify reduce-bend --input input.gpkg --output output.gpkg --diameter 100.
 
 ## Build scripts (`rust/scripts`)
 
-The `rust/scripts` folder contains two helper scripts for Windows MSVC builds:
+The `rust/scripts` folder contains helper scripts for both Windows-native and Linux builds:
 
-- `build-win.ps1`: wrapper to run Cargo commands (`check`, `build`, `test`) with consistent environment setup.
+- `build-win.ps1`: wrapper to run Cargo commands (`check`, `build`, `test`) with Windows MSVC environment setup.
 - `env-win.ps1`: configures GDAL/GEOS environment variables from `CONDA_PREFIX` for `windows-msvc` builds.
+- `build-linux.ps1`: Windows PowerShell wrapper that forwards build/test/check to WSL (Linux x64 output).
+- `build-linux.sh`: Linux build runner used by `build-linux.ps1` inside WSL.
 
 ### `env-win.ps1`
 
@@ -62,6 +64,9 @@ Purpose:
   - `geo-simplify --help`
   - `geo-simplify simplify --help`
   - `geo-simplify reduce-bend --help`
+- For `build` and `test`, the script copies the Windows binary to `rust/dist`:
+  - release: `rust/dist/geo-simplify-win-x64.exe`
+  - debug-only: `rust/dist/geo-simplify-win-x64-debug.exe`
 
 Example:
 
@@ -70,6 +75,35 @@ cd d:\BERATools\tangeo-sim-processing\rust
 conda activate data
 .\scripts\build-win.ps1 -Command test -Clean
 ```
+
+### `build-linux.ps1` + `build-linux.sh` (cross-build on Windows via WSL)
+
+Purpose:
+
+- Builds Linux x64 binaries from a Windows host by running Cargo in WSL.
+- Preserves the same command style as `build-win.ps1` (`check|build|test`, `-Clean`, `-Release`, `-DebugOnly`, `-SkipCliSmoke`).
+- Runs the same CLI smoke checks (`--help`, `simplify --help`, `reduce-bend --help`) for `build` and `test`.
+- Copies the built Linux binary to `rust/dist/geo-simplify-linux-x64` after successful `build` or `test`.
+
+WSL prerequisites (Ubuntu):
+
+```bash
+sudo apt update
+sudo apt install -y build-essential pkg-config libgdal-dev libgeos-dev
+```
+
+Example (from Windows PowerShell):
+
+```powershell
+cd d:\BERATools\tangeo-sim-processing\rust
+.\scripts\build-linux.ps1 -Command build -Release
+.\scripts\build-linux.ps1 -Command test -Clean
+```
+
+Output binary path (Linux ELF):
+
+- build artifact: `rust/target/release/geo-simplify`
+- copied distribution artifact: `rust/dist/geo-simplify-linux-x64`
 
 ### Verification
 
@@ -83,6 +117,8 @@ conda activate data
 cargo run -- --help
 cargo run -- simplify --help
 cargo run -- reduce-bend --help
+.\scripts\build-linux.ps1 -Command check -Release
+.\scripts\build-linux.ps1 -Command test -Release
 ```
 
 ## Notes
